@@ -5,15 +5,41 @@
 package postgres
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
+type Cart struct {
+	ID        uuid.UUID `json:"id"`
+	UserID    uuid.UUID `json:"user_id"`
+	ProductID uuid.UUID `json:"product_id"`
+	Quantity  int32     `json:"quantity"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Order struct {
+	ID          uuid.UUID `json:"id"`
+	CustomerID  uuid.UUID `json:"customer_id"`
+	OrderDate   time.Time `json:"order_date"`
+	TotalAmount string    `json:"total_amount"`
+	Status      string    `json:"status"`
+}
+
+type OrderItem struct {
+	ID        uuid.UUID `json:"id"`
+	OrderID   uuid.UUID `json:"order_id"`
+	ProductID uuid.UUID `json:"product_id"`
+	Quantity  int32     `json:"quantity"`
+	Subtotal  string    `json:"subtotal"`
+}
+
 type Product struct {
-	ID            int32  `json:"id"`
-	Name          string `json:"name"`
-	Price         string `json:"price"`
-	Description   string `json:"description"`
-	StockQuantity int32  `json:"stock_quantity"`
+	ID            uuid.UUID `json:"id"`
+	Name          string    `json:"name"`
+	Price         string    `json:"price"`
+	Description   string    `json:"description"`
+	StockQuantity int32     `json:"stock_quantity"`
 }
 
 type User struct {

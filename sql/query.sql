@@ -1,30 +1,26 @@
--- name: AddUser :one
+-- name: AddUser :exec
 INSERT INTO users (fullname, email, password)
-VALUES ($1, $2, $3) RETURNING *;
+VALUES ($1, $2, $3);
 
--- name: ValidateCreds :one
-SELECT CASE
-         WHEN EXISTS (SELECT 1 FROM users u WHERE u.email = $1 AND u.password = $2) THEN 1
-         WHEN EXISTS (SELECT 1 FROM users v WHERE v.email = $1) THEN 0
-         ELSE 2
-       END AS Result;
+-- name: GetUserByEmail :one
+SELECT * FROM users WHERE email = $1 LIMIT 1;
 
 -- name: AddProduct :one
-INSERT INTO product (name, price, description, stock_quantity) 
+INSERT INTO products (name, price, description, stock_quantity) 
 VALUES ($1, $2, $3, $4) RETURNING *;
 
 -- name: GetProducts :many
-SELECT * FROM product;
+SELECT * FROM products;
 
 -- name: GetProductById :one
-SELECT * FROM product WHERE id = $1;
+SELECT * FROM products WHERE id = $1;
 
 -- name: DeleteProductById :one
-DELETE FROM Product 
+DELETE FROM products 
 WHERE id=$1 RETURNING *;
 
 -- name: UpdateProductById :one
-UPDATE Product
+UPDATE products
 SET 
     name = COALESCE($2, name),
     price = COALESCE($3, price),
@@ -32,3 +28,18 @@ SET
     stock_quantity = COALESCE($5, stock_quantity)
 WHERE
     id = $1 RETURNING *;
+
+-- name: ViewCart :many
+SELECT * FROM cart WHERE user_id = $1;
+
+-- name: AddToCart :one
+INSERT INTO cart (user_id, product_id, quantity)
+VALUES ($1, $2, $3) RETURNING *;
+
+-- name: RemoveFromCart :one
+DELETE FROM cart
+WHERE user_id = $1 AND product_id = $2 RETURNING *;
+
+-- name: ClearCart :exec
+DELETE FROM cart
+WHERE user_id = $1;

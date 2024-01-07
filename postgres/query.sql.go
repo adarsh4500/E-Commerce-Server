@@ -7,10 +7,12 @@ package postgres
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const addProduct = `-- name: AddProduct :one
-INSERT INTO product (name, price, description, stock_quantity) 
+INSERT INTO products (name, price, description, stock_quantity) 
 VALUES ($1, $2, $3, $4) RETURNING id, name, price, description, stock_quantity
 `
 
@@ -39,9 +41,33 @@ func (q *Queries) AddProduct(ctx context.Context, arg AddProductParams) (Product
 	return i, err
 }
 
-const addUser = `-- name: AddUser :one
+const addToCart = `-- name: AddToCart :one
+INSERT INTO cart (user_id, product_id, quantity)
+VALUES ($1, $2, $3) RETURNING id, user_id, product_id, quantity, created_at
+`
+
+type AddToCartParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	ProductID uuid.UUID `json:"product_id"`
+	Quantity  int32     `json:"quantity"`
+}
+
+func (q *Queries) AddToCart(ctx context.Context, arg AddToCartParams) (Cart, error) {
+	row := q.db.QueryRowContext(ctx, addToCart, arg.UserID, arg.ProductID, arg.Quantity)
+	var i Cart
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ProductID,
+		&i.Quantity,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const addUser = `-- name: AddUser :exec
 INSERT INTO users (fullname, email, password)
-VALUES ($1, $2, $3) RETURNING fullname, email, password, id
+VALUES ($1, $2, $3)
 `
 
 type AddUserParams struct {
@@ -50,24 +76,27 @@ type AddUserParams struct {
 	Password string `json:"password"`
 }
 
-func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, addUser, arg.Fullname, arg.Email, arg.Password)
-	var i User
-	err := row.Scan(
-		&i.Fullname,
-		&i.Email,
-		&i.Password,
-		&i.ID,
-	)
-	return i, err
+func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) error {
+	_, err := q.db.ExecContext(ctx, addUser, arg.Fullname, arg.Email, arg.Password)
+	return err
+}
+
+const clearCart = `-- name: ClearCart :exec
+DELETE FROM cart
+WHERE user_id = $1
+`
+
+func (q *Queries) ClearCart(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.ExecContext(ctx, clearCart, userID)
+	return err
 }
 
 const deleteProductById = `-- name: DeleteProductById :one
-DELETE FROM Product 
+DELETE FROM products 
 WHERE id=$1 RETURNING id, name, price, description, stock_quantity
 `
 
-func (q *Queries) DeleteProductById(ctx context.Context, id int32) (Product, error) {
+func (q *Queries) DeleteProductById(ctx context.Context, id uuid.UUID) (Product, error) {
 	row := q.db.QueryRowContext(ctx, deleteProductById, id)
 	var i Product
 	err := row.Scan(
@@ -81,10 +110,10 @@ func (q *Queries) DeleteProductById(ctx context.Context, id int32) (Product, err
 }
 
 const getProductById = `-- name: GetProductById :one
-SELECT id, name, price, description, stock_quantity FROM product WHERE id = $1
+SELECT id, name, price, description, stock_quantity FROM products WHERE id = $1
 `
 
-func (q *Queries) GetProductById(ctx context.Context, id int32) (Product, error) {
+func (q *Queries) GetProductById(ctx context.Context, id uuid.UUID) (Product, error) {
 	row := q.db.QueryRowContext(ctx, getProductById, id)
 	var i Product
 	err := row.Scan(
@@ -98,7 +127,7 @@ func (q *Queries) GetProductById(ctx context.Context, id int32) (Product, error)
 }
 
 const getProducts = `-- name: GetProducts :many
-SELECT id, name, price, description, stock_quantity FROM product
+SELECT id, name, price, description, stock_quantity FROM products
 `
 
 func (q *Queries) GetProducts(ctx context.Context) ([]Product, error) {
@@ -130,8 +159,47 @@ func (q *Queries) GetProducts(ctx context.Context) ([]Product, error) {
 	return items, nil
 }
 
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT fullname, email, password, id FROM users WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.Fullname,
+		&i.Email,
+		&i.Password,
+		&i.ID,
+	)
+	return i, err
+}
+
+const removeFromCart = `-- name: RemoveFromCart :one
+DELETE FROM cart
+WHERE user_id = $1 AND product_id = $2 RETURNING id, user_id, product_id, quantity, created_at
+`
+
+type RemoveFromCartParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	ProductID uuid.UUID `json:"product_id"`
+}
+
+func (q *Queries) RemoveFromCart(ctx context.Context, arg RemoveFromCartParams) (Cart, error) {
+	row := q.db.QueryRowContext(ctx, removeFromCart, arg.UserID, arg.ProductID)
+	var i Cart
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ProductID,
+		&i.Quantity,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const updateProductById = `-- name: UpdateProductById :one
-UPDATE Product
+UPDATE products
 SET 
     name = COALESCE($2, name),
     price = COALESCE($3, price),
@@ -142,11 +210,11 @@ WHERE
 `
 
 type UpdateProductByIdParams struct {
-	ID            int32  `json:"id"`
-	Name          string `json:"name"`
-	Price         string `json:"price"`
-	Description   string `json:"description"`
-	StockQuantity int32  `json:"stock_quantity"`
+	ID            uuid.UUID `json:"id"`
+	Name          string    `json:"name"`
+	Price         string    `json:"price"`
+	Description   string    `json:"description"`
+	StockQuantity int32     `json:"stock_quantity"`
 }
 
 func (q *Queries) UpdateProductById(ctx context.Context, arg UpdateProductByIdParams) (Product, error) {
@@ -168,22 +236,35 @@ func (q *Queries) UpdateProductById(ctx context.Context, arg UpdateProductByIdPa
 	return i, err
 }
 
-const validateCreds = `-- name: ValidateCreds :one
-SELECT CASE
-         WHEN EXISTS (SELECT 1 FROM users u WHERE u.email = $1 AND u.password = $2) THEN 1
-         WHEN EXISTS (SELECT 1 FROM users v WHERE v.email = $1) THEN 0
-         ELSE 2
-       END AS Result
+const viewCart = `-- name: ViewCart :many
+SELECT id, user_id, product_id, quantity, created_at FROM cart WHERE user_id = $1
 `
 
-type ValidateCredsParams struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-func (q *Queries) ValidateCreds(ctx context.Context, arg ValidateCredsParams) (int32, error) {
-	row := q.db.QueryRowContext(ctx, validateCreds, arg.Email, arg.Password)
-	var result int32
-	err := row.Scan(&result)
-	return result, err
+func (q *Queries) ViewCart(ctx context.Context, userID uuid.UUID) ([]Cart, error) {
+	rows, err := q.db.QueryContext(ctx, viewCart, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Cart
+	for rows.Next() {
+		var i Cart
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.ProductID,
+			&i.Quantity,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
