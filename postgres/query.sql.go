@@ -7,9 +7,54 @@ package postgres
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+const addOrder = `-- name: AddOrder :one
+INSERT INTO orders (customer_id, total_amount)
+VALUES ($1, $2) RETURNING id
+`
+
+type AddOrderParams struct {
+	CustomerID  uuid.UUID `json:"customer_id"`
+	TotalAmount string    `json:"total_amount"`
+}
+
+func (q *Queries) AddOrder(ctx context.Context, arg AddOrderParams) (uuid.UUID, error) {
+	row := q.db.QueryRowContext(ctx, addOrder, arg.CustomerID, arg.TotalAmount)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const addOrderItem = `-- name: AddOrderItem :one
+INSERT INTO order_items (order_id, product_id, quantity, subtotal)
+VALUES ($1, $2, $3, (SELECT price * CAST($5 AS DECIMAL(10, 2)) FROM products WHERE products.id = $4))
+RETURNING subtotal
+`
+
+type AddOrderItemParams struct {
+	OrderID   uuid.UUID `json:"order_id"`
+	ProductID uuid.UUID `json:"product_id"`
+	Quantity  int32     `json:"quantity"`
+	ID        uuid.UUID `json:"id"`
+	Column5   string    `json:"column_5"`
+}
+
+func (q *Queries) AddOrderItem(ctx context.Context, arg AddOrderItemParams) (string, error) {
+	row := q.db.QueryRowContext(ctx, addOrderItem,
+		arg.OrderID,
+		arg.ProductID,
+		arg.Quantity,
+		arg.ID,
+		arg.Column5,
+	)
+	var subtotal string
+	err := row.Scan(&subtotal)
+	return subtotal, err
+}
 
 const addProduct = `-- name: AddProduct :one
 INSERT INTO products (name, price, description, stock_quantity) 
@@ -43,7 +88,7 @@ func (q *Queries) AddProduct(ctx context.Context, arg AddProductParams) (Product
 
 const addToCart = `-- name: AddToCart :one
 INSERT INTO cart (user_id, product_id, quantity)
-VALUES ($1, $2, $3) RETURNING id, user_id, product_id, quantity, created_at
+VALUES ($1, $2, $3) RETURNING id, user_id, product_id, quantity, modified_at
 `
 
 type AddToCartParams struct {
@@ -60,7 +105,7 @@ func (q *Queries) AddToCart(ctx context.Context, arg AddToCartParams) (Cart, err
 		&i.UserID,
 		&i.ProductID,
 		&i.Quantity,
-		&i.CreatedAt,
+		&i.ModifiedAt,
 	)
 	return i, err
 }
@@ -177,7 +222,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 
 const removeFromCart = `-- name: RemoveFromCart :one
 DELETE FROM cart
-WHERE user_id = $1 AND product_id = $2 RETURNING id, user_id, product_id, quantity, created_at
+WHERE user_id = $1 AND product_id = $2 RETURNING id, user_id, product_id, quantity, modified_at
 `
 
 type RemoveFromCartParams struct {
@@ -193,7 +238,54 @@ func (q *Queries) RemoveFromCart(ctx context.Context, arg RemoveFromCartParams) 
 		&i.UserID,
 		&i.ProductID,
 		&i.Quantity,
-		&i.CreatedAt,
+		&i.ModifiedAt,
+	)
+	return i, err
+}
+
+const updateOrderStatus = `-- name: UpdateOrderStatus :one
+UPDATE orders
+SET status = $1
+WHERE id = $2 RETURNING id, customer_id, order_date, total_amount, status
+`
+
+type UpdateOrderStatusParams struct {
+	Status string    `json:"status"`
+	ID     uuid.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error) {
+	row := q.db.QueryRowContext(ctx, updateOrderStatus, arg.Status, arg.ID)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.OrderDate,
+		&i.TotalAmount,
+		&i.Status,
+	)
+	return i, err
+}
+
+const updateOrderTotal = `-- name: UpdateOrderTotal :one
+UPDATE orders SET total_amount = $2
+WHERE id = $1 RETURNING id, customer_id, order_date, total_amount, status
+`
+
+type UpdateOrderTotalParams struct {
+	ID          uuid.UUID `json:"id"`
+	TotalAmount string    `json:"total_amount"`
+}
+
+func (q *Queries) UpdateOrderTotal(ctx context.Context, arg UpdateOrderTotalParams) (Order, error) {
+	row := q.db.QueryRowContext(ctx, updateOrderTotal, arg.ID, arg.TotalAmount)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.OrderDate,
+		&i.TotalAmount,
+		&i.Status,
 	)
 	return i, err
 }
@@ -237,7 +329,7 @@ func (q *Queries) UpdateProductById(ctx context.Context, arg UpdateProductByIdPa
 }
 
 const viewCart = `-- name: ViewCart :many
-SELECT id, user_id, product_id, quantity, created_at FROM cart WHERE user_id = $1
+SELECT id, user_id, product_id, quantity, modified_at FROM cart WHERE user_id = $1
 `
 
 func (q *Queries) ViewCart(ctx context.Context, userID uuid.UUID) ([]Cart, error) {
@@ -254,7 +346,83 @@ func (q *Queries) ViewCart(ctx context.Context, userID uuid.UUID) ([]Cart, error
 			&i.UserID,
 			&i.ProductID,
 			&i.Quantity,
-			&i.CreatedAt,
+			&i.ModifiedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const viewOrderItems = `-- name: ViewOrderItems :many
+SELECT id, order_id, product_id, quantity, subtotal
+FROM order_items
+WHERE order_id = $1
+`
+
+func (q *Queries) ViewOrderItems(ctx context.Context, orderID uuid.UUID) ([]OrderItem, error) {
+	rows, err := q.db.QueryContext(ctx, viewOrderItems, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OrderItem
+	for rows.Next() {
+		var i OrderItem
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderID,
+			&i.ProductID,
+			&i.Quantity,
+			&i.Subtotal,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const viewOrders = `-- name: ViewOrders :many
+SELECT id, order_date, total_amount, status
+FROM orders
+WHERE customer_id = $1
+`
+
+type ViewOrdersRow struct {
+	ID          uuid.UUID `json:"id"`
+	OrderDate   time.Time `json:"order_date"`
+	TotalAmount string    `json:"total_amount"`
+	Status      string    `json:"status"`
+}
+
+func (q *Queries) ViewOrders(ctx context.Context, customerID uuid.UUID) ([]ViewOrdersRow, error) {
+	rows, err := q.db.QueryContext(ctx, viewOrders, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ViewOrdersRow
+	for rows.Next() {
+		var i ViewOrdersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrderDate,
+			&i.TotalAmount,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}

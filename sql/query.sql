@@ -43,3 +43,31 @@ WHERE user_id = $1 AND product_id = $2 RETURNING *;
 -- name: ClearCart :exec
 DELETE FROM cart
 WHERE user_id = $1;
+
+-- name: AddOrder :one
+INSERT INTO orders (customer_id, total_amount)
+VALUES ($1, $2) RETURNING id;
+
+-- name: UpdateOrderTotal :one
+UPDATE orders SET total_amount = $2
+WHERE id = $1 RETURNING *;
+
+-- name: UpdateOrderStatus :one
+UPDATE orders
+SET status = $1
+WHERE id = $2 RETURNING *;
+
+-- name: AddOrderItem :one
+INSERT INTO order_items (order_id, product_id, quantity, subtotal)
+VALUES ($1, $2, $3, (SELECT price * CAST($5 AS DECIMAL(10, 2)) FROM products WHERE products.id = $4))
+RETURNING subtotal;
+
+-- name: ViewOrders :many
+SELECT id, order_date, total_amount, status
+FROM orders
+WHERE customer_id = $1;
+
+-- name: ViewOrderItems :many
+SELECT id, order_id, product_id, quantity, subtotal
+FROM order_items
+WHERE order_id = $1;

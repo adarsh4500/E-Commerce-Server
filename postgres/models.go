@@ -11,11 +11,11 @@ import (
 )
 
 type Cart struct {
-	ID        uuid.UUID `json:"id"`
-	UserID    uuid.UUID `json:"user_id"`
-	ProductID uuid.UUID `json:"product_id"`
-	Quantity  int32     `json:"quantity"`
-	CreatedAt time.Time `json:"created_at"`
+	ID         uuid.UUID `json:"id"`
+	UserID     uuid.UUID `json:"user_id"`
+	ProductID  uuid.UUID `json:"product_id"`
+	Quantity   int32     `json:"quantity"`
+	ModifiedAt time.Time `json:"modified_at"`
 }
 
 type Order struct {

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -56,9 +57,9 @@ func LoginHandler(c *gin.Context) {
 		//Set Cookie
 		c.SetSameSite(http.SameSiteLaxMode)
 		c.SetCookie("token", tokenString, int(time.Now().Add(1*time.Hour).Unix()), "", "", false, true)
+		models.UserID = user.ID
 		utils.SuccessResponse(c, gin.H{"message": "Successfully Logged in"})
 		return
-
 	}
 
 	utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("incorrect password"))
@@ -93,6 +94,7 @@ func SignupHandler(c *gin.Context) {
 }
 
 func LogOutHandler(c *gin.Context) {
+	models.UserID = uuid.Nil
 	c.SetCookie("token", "", -1, "/", "", false, true)
 	utils.SuccessResponse(c, gin.H{"message": "Successflly Logged Out"})
 }

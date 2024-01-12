@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"Ecom/config"
+	"Ecom/models"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
@@ -47,6 +49,7 @@ func Authenticate(c *gin.Context) {
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
 		user := claims["email"]
+		models.UserID, _ = uuid.Parse(claims["id"].(string))
 		expiresAt := claims["expires at"].(float64)
 		if float64(time.Now().Unix()) < expiresAt {
 			c.Set("user", user)
