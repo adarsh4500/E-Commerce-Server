@@ -31,7 +31,7 @@ A robust and secure backend service designed for managing user authentication, p
     ```bash
     cd E-Commerce-Server
 
-3. Update the .env file in the root directory with your configuration. Use existing .env as a template.
+3. Create a .env file in the root directory and update it with your configuration using the template below.
 
     ```.env
     JWT_SECRET_KEY=<your-secret-key-here>
