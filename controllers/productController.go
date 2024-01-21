@@ -13,6 +13,13 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// @Summary Get All Products
+// @Description Retrieves a list of all products.
+// @Tags Products
+// @Produce json
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /products [get]
 func GetAllProductsHandler(c *gin.Context) {
 	query := postgres.New(connections.DB)
 
@@ -24,6 +31,15 @@ func GetAllProductsHandler(c *gin.Context) {
 	utils.SuccessResponse(c, products)
 }
 
+// @Summary Get Product by ID
+// @Description Retrieves product details by ID.
+// @Tags Products
+// @Produce json
+// @Param id path string true "Product ID" format(uuid)
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 400 {object} utils.TypeErrorResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /products/{id} [get]
 func GetProductHandler(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -40,6 +56,16 @@ func GetProductHandler(c *gin.Context) {
 	utils.SuccessResponse(c, product)
 }
 
+// @Summary Add New Product
+// @Description Creates a new product.
+// @Tags Products
+// @Accept json
+// @Produce json
+// @Param request body models.Product true "New product information"
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 400 {object} utils.TypeErrorResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /products/new [post]
 func NewProductHandler(c *gin.Context) {
 
 	var newProduct models.Product
@@ -66,6 +92,18 @@ func NewProductHandler(c *gin.Context) {
 	utils.SuccessResponse(c, product)
 
 }
+
+// @Summary Update Product by ID
+// @Description Updates product details by ID.
+// @Tags Products
+// @Accept json
+// @Produce json
+// @Param id path string true "Product ID" format(uuid)
+// @Param request body models.EditProduct true "Fields to update"
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 400 {object} utils.TypeErrorResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /products/update/{id} [post]
 func UpdateProductHandler(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -116,6 +154,15 @@ func UpdateProductHandler(c *gin.Context) {
 	utils.SuccessResponse(c, update)
 }
 
+// @Summary Delete Product by ID
+// @Description Deletes a product by ID.
+// @Tags Products
+// @Produce json
+// @Param id path string true "Product ID" format(uuid)
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 400 {object} utils.TypeErrorResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /products/delete/{id} [post]
 func DeleteProductHandler(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {

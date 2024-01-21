@@ -6,77 +6,19 @@ import (
 	"Ecom/postgres"
 	"Ecom/utils"
 	"context"
-	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-func PlaceOrderHandler(c *gin.Context) {
-	query := postgres.New(connections.DB)
-
-	cart, err := query.ViewCart(context.Background(), models.UserID)
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err)
-		return
-	}
-
-	if len(cart) == 0 {
-		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("cart is empty"))
-		return
-	}
-
-	oid, err := query.AddOrder(context.Background(), postgres.AddOrderParams{
-		CustomerID:  models.UserID,
-		TotalAmount: "0",
-	})
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err)
-		return
-	}
-	var total = float64(0.00)
-
-	for _, item := range cart {
-		i, err := query.AddOrderItem(context.Background(), postgres.AddOrderItemParams{
-			OrderID:   oid,
-			ProductID: item.ProductID,
-			Quantity:  item.Quantity,
-			ID:        item.ProductID,
-			Column5:   strconv.Itoa(int(item.Quantity)),
-		})
-		if err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, err)
-			return
-		}
-		f, err := strconv.ParseFloat(i, 64)
-		if err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, err)
-			return
-		}
-		total += f
-	}
-
-	strtotal := strconv.FormatFloat(total, 'f', -1, 64)
-	orderdetails, err := query.UpdateOrderTotal(context.Background(), postgres.UpdateOrderTotalParams{
-		ID:          oid,
-		TotalAmount: strtotal,
-	})
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err)
-		return
-	}
-
-	err = query.ClearCart(context.Background(), models.UserID)
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err)
-		return
-	}
-
-	utils.SuccessResponse(c, orderdetails)
-}
-
+// @Summary View Orders
+// @Description Retrieves a list of orders for the current user.
+// @Tags Orders
+// @Produce json
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /orders [get]
 func ViewOrderHandler(c *gin.Context) {
 	query := postgres.New(connections.DB)
 
@@ -89,6 +31,17 @@ func ViewOrderHandler(c *gin.Context) {
 	utils.SuccessResponse(c, orders)
 }
 
+
+// @Summary Update Order Status
+// @Description Updates the status of an order.
+// @Tags Orders
+// @Accept json
+// @Produce json
+// @Param request body postgres.UpdateOrderStatusParams true "Order status information"
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 400 {object} utils.TypeErrorResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /orders/updatestatus [post]
 func UpdateOrderStatusHandler(c *gin.Context) {
 	var param postgres.UpdateOrderStatusParams
 	err := c.BindJSON(&param)
@@ -108,6 +61,15 @@ func UpdateOrderStatusHandler(c *gin.Context) {
 	utils.SuccessResponse(c, orders)
 }
 
+// @Summary View Order Items
+// @Description Retrieves the items of a specific order by ID.
+// @Tags Orders
+// @Produce json
+// @Param id path string true "Order ID" format(uuid)
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 400 {object} utils.TypeErrorResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /orders/{id} [get]
 func ViewOrderItemsHandler(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {

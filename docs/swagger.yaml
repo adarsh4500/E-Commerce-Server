@@ -1,0 +1,497 @@
+basePath: /
+definitions:
+  models.CartItem:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    type: object
+  models.Creds:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.EditProduct:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      price:
+        type: string
+      stock_quantity:
+        type: integer
+    type: object
+  models.Product:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      price:
+        type: string
+      stock_quantity:
+        type: integer
+    required:
+    - name
+    - price
+    - stock_quantity
+    type: object
+  models.User:
+    properties:
+      email:
+        type: string
+      fullname:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - fullname
+    - password
+    type: object
+  postgres.UpdateOrderStatusParams:
+    properties:
+      id:
+        type: string
+      status:
+        type: string
+    type: object
+  utils.TypeErrorResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: integer
+      timestamp:
+        type: string
+    type: object
+  utils.TypeSuccessResponse:
+    properties:
+      data: {}
+      status:
+        type: integer
+      timestamp:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: An E-commerce API service in Go using Gin Framework
+  title: Ecom Services API
+  version: "1.0"
+paths:
+  /cart:
+    get:
+      description: Retrieves the items in the user's cart.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: View Cart
+      tags:
+      - Cart
+  /cart/checkout:
+    post:
+      description: Places an order using the items in the user's cart.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Place Order
+      tags:
+      - Cart
+  /cart/clear:
+    post:
+      description: Clears all items from the user's cart.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Clear Cart
+      tags:
+      - Cart
+  /cart/new:
+    post:
+      consumes:
+      - application/json
+      description: Adds a product to the user's cart.
+      parameters:
+      - description: Cart item information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CartItem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Add to Cart
+      tags:
+      - Cart
+  /cart/remove/{id}:
+    post:
+      description: Removes a product from the user's cart.
+      parameters:
+      - description: Product ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Remove from Cart
+      tags:
+      - Cart
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Logs in a user and returns an authentication token.
+      parameters:
+      - description: User credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Creds'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Login
+      tags:
+      - Authentication
+  /logout:
+    post:
+      description: Logs out the currently authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+      summary: Logout
+      tags:
+      - Authentication
+  /orders:
+    get:
+      description: Retrieves a list of orders for the current user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: View Orders
+      tags:
+      - Orders
+  /orders/{id}:
+    get:
+      description: Retrieves the items of a specific order by ID.
+      parameters:
+      - description: Order ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: View Order Items
+      tags:
+      - Orders
+  /orders/updatestatus:
+    post:
+      consumes:
+      - application/json
+      description: Updates the status of an order.
+      parameters:
+      - description: Order status information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/postgres.UpdateOrderStatusParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Update Order Status
+      tags:
+      - Orders
+  /products:
+    get:
+      description: Retrieves a list of all products.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Get All Products
+      tags:
+      - Products
+  /products/{id}:
+    get:
+      description: Retrieves product details by ID.
+      parameters:
+      - description: Product ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Get Product by ID
+      tags:
+      - Products
+  /products/delete/{id}:
+    post:
+      description: Deletes a product by ID.
+      parameters:
+      - description: Product ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Delete Product by ID
+      tags:
+      - Products
+  /products/new:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new product.
+      parameters:
+      - description: New product information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.Product'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Add New Product
+      tags:
+      - Products
+  /products/update/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Updates product details by ID.
+      parameters:
+      - description: Product ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.EditProduct'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Update Product by ID
+      tags:
+      - Products
+  /signup:
+    post:
+      consumes:
+      - application/json
+      description: Registers a new user.
+      parameters:
+      - description: User information
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.TypeSuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.TypeErrorResponse'
+      summary: Signup
+      tags:
+      - Authentication
+swagger: "2.0"

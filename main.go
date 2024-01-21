@@ -3,6 +3,7 @@ package main
 import (
 	"Ecom/config"
 	"Ecom/connections"
+	_ "Ecom/docs"
 	"Ecom/routes"
 	"fmt"
 	"log"
@@ -10,6 +11,11 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// @title Ecom Services API
+// @version 1.0
+// @description An E-commerce API service in Go using Gin Framework
+// @host localhost:8080
+// @BasePath /
 func main() {
 
 	err := config.LoadEnv()

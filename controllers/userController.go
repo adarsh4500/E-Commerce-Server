@@ -20,6 +20,17 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// @Summary Login
+// @Description Logs in a user and returns an authentication token.
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body models.Creds true "User credentials"
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 400 {object} utils.TypeErrorResponse
+// @Failure 401 {object} utils.TypeErrorResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /login [post]
 func LoginHandler(c *gin.Context) {
 	var creds models.Creds
 	err := c.ShouldBindJSON(&creds)
@@ -65,6 +76,16 @@ func LoginHandler(c *gin.Context) {
 	utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("incorrect password"))
 }
 
+// @Summary Signup
+// @Description Registers a new user.
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param request body models.User true "User information"
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Failure 400 {object} utils.TypeErrorResponse
+// @Failure 500 {object} utils.TypeErrorResponse
+// @Router /signup [post]
 func SignupHandler(c *gin.Context) {
 	var user models.User
 	err := c.ShouldBindJSON(&user)
@@ -93,6 +114,12 @@ func SignupHandler(c *gin.Context) {
 	utils.SuccessResponse(c, gin.H{"message": "Signed Up Successfully"})
 }
 
+// @Summary Logout
+// @Description Logs out the currently authenticated user.
+// @Tags Authentication
+// @Produce json
+// @Success 200 {object} utils.TypeSuccessResponse
+// @Router /logout [post]
 func LogOutHandler(c *gin.Context) {
 	models.UserID = uuid.Nil
 	c.SetCookie("token", "", -1, "/", "", false, true)
