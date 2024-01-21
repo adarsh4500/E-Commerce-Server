@@ -2,7 +2,7 @@
 
 ## Overview
 
-A robust and secure backend service designed for managing user authentication, product catalog, shopping cart, and order processing in an e-commerce application. This API is built using the Go programming language and the Gin framework, providing a scalable and performant solution for any e-commerce backend needs.
+A robust and secure backend service designed for managing user authentication, product catalog, shopping cart, and order processing in an e-commerce application. This API is built using the Go programming language and the Gin framework, providing a scalable and performant solution for basic e-commerce backend needs.
 
 ## Features
 
