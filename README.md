@@ -42,9 +42,7 @@ A robust and secure backend service designed for managing user authentication, p
 4. Install dependencies:
 
     ```bash
-    Copy code
     go mod tidy
-    Run the application:
 
 5. Run the main.go file.
 
