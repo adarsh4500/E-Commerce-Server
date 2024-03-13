@@ -5,21 +5,17 @@ import (
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	ginSwagger "github.com/swaggo/gin-swagger"
-	swaggerFiles "github.com/swaggo/files"
 )
 
 func SetupRouter() *gin.Engine {
 
 	router := gin.Default()
-	//adding swagger
-	router.GET("/docs/*any",ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	authMiddleware := controllers.Authenticate
 
 	router.POST("/signup", controllers.SignupHandler)
 	router.POST("/login", controllers.LoginHandler)
-	router.POST("/logout", controllers.LoginHandler)
+	router.POST("/logout", controllers.LogOutHandler)
 
 	productGroup := router.Group("/products", authMiddleware)
 	{

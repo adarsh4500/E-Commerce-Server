@@ -18,10 +18,11 @@ type TypeErrorResponse struct {
 type TypeSuccessResponse struct {
 	Timestamp string      `json:"timestamp"`
 	Status    int         `json:"status"`
-	Data      interface{} `json:"data"`
+	Data      interface{} `json:"data,omitempty"`
+	Message   string      `json:"message,omitempty"`
 }
 
-func ErrorResponse(c *gin.Context, status int,  err error) {
+func ErrorResponse(c *gin.Context, status int, err error) {
 	c.JSON(status, gin.H{
 		"timestamp": time.Now().String(),
 		"status":    status,
@@ -34,5 +35,22 @@ func SuccessResponse(c *gin.Context, res interface{}) {
 		"timestamp": time.Now().String(),
 		"status":    http.StatusOK,
 		"data":      res,
+	})
+}
+
+func SuccessResponseWithMessage(c *gin.Context, message string) {
+	c.JSON(http.StatusOK, gin.H{
+		"timestamp": time.Now().String(),
+		"status":    http.StatusOK,
+		"message":   message,
+	})
+}
+
+func SuccessResponseWithDataAndMessage(c *gin.Context, data interface{}, message string) {
+	c.JSON(http.StatusOK, gin.H{
+		"timestamp": time.Now().String(),
+		"status":    http.StatusOK,
+		"data":      data,
+		"message":   message,
 	})
 }

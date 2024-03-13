@@ -1,0 +1,449 @@
+{
+  "info": {
+    "_postman_id": "ecommerce-api-collection-id",
+    "name": "E-Commerce API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for E-Commerce API built with Go and Gin."
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullname\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/signup", "host": ["{{base_url}}"], "path": ["signup"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"message\": \"Signed Up Successfully\"\n}"
+            },
+            {
+              "name": "Validation Error",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"invalid email format\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/login", "host": ["{{base_url}}"], "path": ["login"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"message\": \"Successfully Logged in\"\n}"
+            },
+            {
+              "name": "Invalid Credentials",
+              "originalRequest": {},
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 401,\n  \"message\": \"incorrect password\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/logout", "host": ["{{base_url}}"], "path": ["logout"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"message\": \"Successfully Logged Out\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/products", "host": ["{{base_url}}"], "path": ["products"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\"id\": \"uuid\", \"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/products/:id", "host": ["{{base_url}}"], "path": ["products", ":id"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n}"
+            },
+            {
+              "name": "Not Found",
+              "originalRequest": {},
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 404,\n  \"message\": \"sql: no rows in result set\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Add New Product",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Product 1\",\n  \"price\": 10.00,\n  \"description\": \"A product\",\n  \"stock_quantity\": 100\n}"
+            },
+            "url": { "raw": "{{base_url}}/products/new", "host": ["{{base_url}}"], "path": ["products", "new"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n}"
+            },
+            {
+              "name": "Validation Error",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"price must be greater than 0\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Product by ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Product\",\n  \"price\": 12.00\n}"
+            },
+            "url": { "raw": "{{base_url}}/products/update/:id", "host": ["{{base_url}}"], "path": ["products", "update", ":id"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"name\": \"Updated Product\", \"price\": \"12.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n}"
+            },
+            {
+              "name": "Not Found",
+              "originalRequest": {},
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 404,\n  \"message\": \"sql: no rows in result set\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Product by ID",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/products/delete/:id", "host": ["{{base_url}}"], "path": ["products", "delete", ":id"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n}"
+            },
+            {
+              "name": "Not Found",
+              "originalRequest": {},
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 404,\n  \"message\": \"sql: no rows in result set\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Add to Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"product_id\": \"uuid\",\n  \"quantity\": 2\n}"
+            },
+            "url": { "raw": "{{base_url}}/cart/new", "host": ["{{base_url}}"], "path": ["cart", "new"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"user_id\": \"uuid\", \"product_id\": \"uuid\", \"quantity\": 2, \"modified_at\": \"2024-01-01T00:00:00Z\"}\n}"
+            },
+            {
+              "name": "Validation Error",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"quantity must be greater than 0\"\n}"
+            },
+            {
+              "name": "Insufficient Stock",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"not enough items in stock. requested:5, available:3\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove from Cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/cart/remove/:id", "host": ["{{base_url}}"], "path": ["cart", "remove", ":id"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"user_id\": \"uuid\", \"product_id\": \"uuid\", \"quantity\": 2, \"modified_at\": \"2024-01-01T00:00:00Z\"}\n}"
+            }
+          ]
+        },
+        {
+          "name": "View Cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/cart", "host": ["{{base_url}}"], "path": ["cart"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\"id\": \"uuid\", \"user_id\": \"uuid\", \"product_id\": \"uuid\", \"quantity\": 2, \"modified_at\": \"2024-01-01T00:00:00Z\"}\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/cart/clear", "host": ["{{base_url}}"], "path": ["cart", "clear"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"message\": \"Cart has been cleared\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Place Order",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/cart/checkout", "host": ["{{base_url}}"], "path": ["cart", "checkout"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"customer_id\": \"uuid\", \"order_date\": \"2024-01-01T00:00:00Z\", \"total_amount\": \"24.00\", \"status\": \"Pending\"}\n}"
+            },
+            {
+              "name": "Empty Cart",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"cart is empty\"\n}"
+            },
+            {
+              "name": "Insufficient Stock",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"not enough stock for product: Product Name\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "View Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/orders", "host": ["{{base_url}}"], "path": ["orders"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\"id\": \"uuid\", \"order_date\": \"2024-01-01T00:00:00Z\", \"total_amount\": \"24.00\", \"status\": \"Pending\"}\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "View Order Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/orders/:id", "host": ["{{base_url}}"], "path": ["orders", ":id"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\"id\": \"uuid\", \"order_id\": \"uuid\", \"product_id\": \"uuid\", \"quantity\": 2, \"subtotal\": \"20.00\"}\n  ]\n}"
+            },
+            {
+              "name": "Not Found",
+              "originalRequest": {},
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 404,\n  \"message\": \"sql: no rows in result set\"\n}"
+            },
+            {
+              "name": "Forbidden",
+              "originalRequest": {},
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 403,\n  \"message\": \"not authorized to view this order's items\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Order Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"uuid\",\n  \"status\": \"Shipped\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/orders/updatestatus", "host": ["{{base_url}}"], "path": ["orders", "updatestatus"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"customer_id\": \"uuid\", \"order_date\": \"2024-01-01T00:00:00Z\", \"total_amount\": \"24.00\", \"status\": \"Shipped\"}\n}"
+            },
+            {
+              "name": "Invalid Status",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"invalid order status\"\n}"
+            },
+            {
+              "name": "Not Found",
+              "originalRequest": {},
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 404,\n  \"message\": \"sql: no rows in result set\"\n}"
+            },
+            {
+              "name": "Forbidden",
+              "originalRequest": {},
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 403,\n  \"message\": \"not authorized to update this order\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    }
+  ]
+} 

@@ -3,7 +3,6 @@ package main
 import (
 	"Ecom/config"
 	"Ecom/connections"
-	_ "Ecom/docs"
 	"Ecom/routes"
 	"fmt"
 	"log"

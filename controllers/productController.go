@@ -6,20 +6,15 @@ import (
 	"Ecom/postgres"
 	"Ecom/utils"
 	"context"
+	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
 
-// @Summary Get All Products
-// @Description Retrieves a list of all products.
-// @Tags Products
-// @Produce json
-// @Success 200 {object} utils.TypeSuccessResponse
-// @Failure 500 {object} utils.TypeErrorResponse
-// @Router /products [get]
 func GetAllProductsHandler(c *gin.Context) {
 	query := postgres.New(connections.DB)
 
@@ -31,15 +26,6 @@ func GetAllProductsHandler(c *gin.Context) {
 	utils.SuccessResponse(c, products)
 }
 
-// @Summary Get Product by ID
-// @Description Retrieves product details by ID.
-// @Tags Products
-// @Produce json
-// @Param id path string true "Product ID" format(uuid)
-// @Success 200 {object} utils.TypeSuccessResponse
-// @Failure 400 {object} utils.TypeErrorResponse
-// @Failure 500 {object} utils.TypeErrorResponse
-// @Router /products/{id} [get]
 func GetProductHandler(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -50,35 +36,41 @@ func GetProductHandler(c *gin.Context) {
 	query := postgres.New(connections.DB)
 	product, err := query.GetProductById(context.Background(), id)
 	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			utils.ErrorResponse(c, http.StatusNotFound, err)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
 	}
 	utils.SuccessResponse(c, product)
 }
 
-// @Summary Add New Product
-// @Description Creates a new product.
-// @Tags Products
-// @Accept json
-// @Produce json
-// @Param request body models.Product true "New product information"
-// @Success 200 {object} utils.TypeSuccessResponse
-// @Failure 400 {object} utils.TypeErrorResponse
-// @Failure 500 {object} utils.TypeErrorResponse
-// @Router /products/new [post]
 func NewProductHandler(c *gin.Context) {
-
 	var newProduct models.Product
 	err := c.ShouldBindJSON(&newProduct)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, err)
 		return
 	}
+	// Input validation
+	if len(newProduct.Name) < 2 || len(newProduct.Name) > 255 {
+		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("name must be 2-255 characters"))
+		return
+	}
+	if newProduct.Price <= 0 {
+		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("price must be greater than 0"))
+		return
+	}
+	if newProduct.StockQuantity < 0 {
+		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("stock_quantity must be >= 0"))
+		return
+	}
 
 	var param = postgres.AddProductParams{
 		Name:          newProduct.Name,
 		Description:   newProduct.Description,
-		Price:         newProduct.Price,
+		Price:         strconv.FormatFloat(newProduct.Price, 'f', 2, 64),
 		StockQuantity: newProduct.StockQuantity,
 	}
 
@@ -90,20 +82,8 @@ func NewProductHandler(c *gin.Context) {
 		return
 	}
 	utils.SuccessResponse(c, product)
-
 }
 
-// @Summary Update Product by ID
-// @Description Updates product details by ID.
-// @Tags Products
-// @Accept json
-// @Produce json
-// @Param id path string true "Product ID" format(uuid)
-// @Param request body models.EditProduct true "Fields to update"
-// @Success 200 {object} utils.TypeSuccessResponse
-// @Failure 400 {object} utils.TypeErrorResponse
-// @Failure 500 {object} utils.TypeErrorResponse
-// @Router /products/update/{id} [post]
 func UpdateProductHandler(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -121,6 +101,10 @@ func UpdateProductHandler(c *gin.Context) {
 	query := postgres.New(connections.DB)
 	product, err := query.GetProductById(context.Background(), id)
 	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			utils.ErrorResponse(c, http.StatusNotFound, err)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
 	}
@@ -133,15 +117,27 @@ func UpdateProductHandler(c *gin.Context) {
 	param.StockQuantity = product.StockQuantity
 
 	if updateFields.Name != nil {
+		if len(*updateFields.Name) < 2 || len(*updateFields.Name) > 255 {
+			utils.ErrorResponse(c, http.StatusBadRequest, errors.New("name must be 2-255 characters"))
+			return
+		}
 		param.Name = *updateFields.Name
 	}
 	if updateFields.Description != nil {
 		param.Description = *updateFields.Description
 	}
 	if updateFields.Price != nil {
-		param.Price = *updateFields.Price
+		if *updateFields.Price <= 0 {
+			utils.ErrorResponse(c, http.StatusBadRequest, errors.New("price must be greater than 0"))
+			return
+		}
+		param.Price = strconv.FormatFloat(*updateFields.Price, 'f', 2, 64)
 	}
 	if updateFields.StockQuantity != nil {
+		if *updateFields.StockQuantity < 0 {
+			utils.ErrorResponse(c, http.StatusBadRequest, errors.New("stock_quantity must be >= 0"))
+			return
+		}
 		param.StockQuantity = *updateFields.StockQuantity
 	}
 
@@ -154,15 +150,6 @@ func UpdateProductHandler(c *gin.Context) {
 	utils.SuccessResponse(c, update)
 }
 
-// @Summary Delete Product by ID
-// @Description Deletes a product by ID.
-// @Tags Products
-// @Produce json
-// @Param id path string true "Product ID" format(uuid)
-// @Success 200 {object} utils.TypeSuccessResponse
-// @Failure 400 {object} utils.TypeErrorResponse
-// @Failure 500 {object} utils.TypeErrorResponse
-// @Router /products/delete/{id} [post]
 func DeleteProductHandler(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -173,6 +160,10 @@ func DeleteProductHandler(c *gin.Context) {
 	query := postgres.New(connections.DB)
 	product, err := query.DeleteProductById(context.Background(), id)
 	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			utils.ErrorResponse(c, http.StatusNotFound, err)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
 	}

@@ -11,31 +11,29 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
-// @Summary Login
-// @Description Logs in a user and returns an authentication token.
-// @Tags Authentication
-// @Accept json
-// @Produce json
-// @Param request body models.Creds true "User credentials"
-// @Success 200 {object} utils.TypeSuccessResponse
-// @Failure 400 {object} utils.TypeErrorResponse
-// @Failure 401 {object} utils.TypeErrorResponse
-// @Failure 500 {object} utils.TypeErrorResponse
-// @Router /login [post]
 func LoginHandler(c *gin.Context) {
 	var creds models.Creds
 	err := c.ShouldBindJSON(&creds)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, err)
+		return
+	}
+	// Input validation
+	if !isValidEmail(creds.Email) {
+		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("invalid email format"))
+		return
+	}
+	if len(creds.Password) < 8 {
+		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("password must be at least 8 characters"))
 		return
 	}
 
@@ -51,41 +49,34 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	if helpers.IsPasswordCorrect(creds.Password, user.Password) {
-
-		//Create Token Object
+		// Create Token Object
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-			"user":       creds.Email,
-			"id":         user.ID,
-			"expires at": time.Now().Add(1 * time.Hour).Unix(),
+			"email": creds.Email,
+			"id":    user.ID.String(),
+			"exp":   time.Now().Add(1 * time.Hour).Unix(),
 		})
 
-		//Sign Token
+		// Sign Token
 		tokenString, err := token.SignedString([]byte(config.JWTSecret))
 		if err != nil {
 			utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("invalid email or password"))
+			return
 		}
 
-		//Set Cookie
+		// Set Cookie (secure, httpOnly)
 		c.SetSameSite(http.SameSiteLaxMode)
-		c.SetCookie("token", tokenString, int(time.Now().Add(1*time.Hour).Unix()), "", "", false, true)
-		models.UserID = user.ID
-		utils.SuccessResponse(c, gin.H{"message": "Successfully Logged in"})
+		secure := false
+		if c.Request.TLS != nil {
+			secure = true
+		}
+		c.SetCookie("token", tokenString, 3600, "", "", secure, true)
+		utils.SuccessResponseWithMessage(c, "Successfully Logged in")
 		return
 	}
 
 	utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("incorrect password"))
 }
 
-// @Summary Signup
-// @Description Registers a new user.
-// @Tags Authentication
-// @Accept json
-// @Produce json
-// @Param request body models.User true "User information"
-// @Success 200 {object} utils.TypeSuccessResponse
-// @Failure 400 {object} utils.TypeErrorResponse
-// @Failure 500 {object} utils.TypeErrorResponse
-// @Router /signup [post]
 func SignupHandler(c *gin.Context) {
 	var user models.User
 	err := c.ShouldBindJSON(&user)
@@ -93,6 +84,16 @@ func SignupHandler(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusBadRequest, err)
 		return
 	}
+	// Input validation
+	if !isValidEmail(user.Email) {
+		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("invalid email format"))
+		return
+	}
+	if len(user.Password) < 8 {
+		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("password must be at least 8 characters"))
+		return
+	}
+
 	user.Password, err = helpers.Encrypt(user.Password)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
@@ -111,17 +112,16 @@ func SignupHandler(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
 	}
-	utils.SuccessResponse(c, gin.H{"message": "Signed Up Successfully"})
+	utils.SuccessResponseWithMessage(c, "Signed Up Successfully")
 }
 
-// @Summary Logout
-// @Description Logs out the currently authenticated user.
-// @Tags Authentication
-// @Produce json
-// @Success 200 {object} utils.TypeSuccessResponse
-// @Router /logout [post]
 func LogOutHandler(c *gin.Context) {
-	models.UserID = uuid.Nil
 	c.SetCookie("token", "", -1, "/", "", false, true)
-	utils.SuccessResponse(c, gin.H{"message": "Successflly Logged Out"})
+	utils.SuccessResponseWithMessage(c, "Successfully Logged Out")
+}
+
+// Email validation helper
+func isValidEmail(email string) bool {
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return re.MatchString(email)
 }
