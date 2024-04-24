@@ -10,6 +10,7 @@ A production-ready, secure backend service for e-commerce applications built wit
 - **Input validation** for email format and password strength
 - **Thread-safe user context** (no global state)
 - **Secure cookie flags** (HttpOnly, Secure)
+- **Role-Based Access Control (RBAC)** with user and admin roles
 
 ### 🛍️ E-Commerce Functionality
 - **User Management**: Registration, login, logout
@@ -24,6 +25,39 @@ A production-ready, secure backend service for e-commerce applications built wit
 - **Input validation** and sanitization
 - **Authorization checks** (users can only access their own data)
 - **Structured logging** and response formatting
+- **Role-based route protection** with middleware
+
+## 🔐 Role-Based Access Control (RBAC)
+
+### User Roles
+- **User** (default): Can view products, manage cart, place orders, view their own orders
+- **Admin**: Can perform all user actions plus product management and order status updates
+
+### Role Assignment
+- New users are automatically assigned the "user" role
+- Admin users must be manually set in the database
+- Roles are included in JWT tokens for authorization
+
+### Protected Endpoints
+
+#### Admin-Only Endpoints
+- `POST /products/new` - Create new products
+- `POST /products/update/:id` - Update existing products  
+- `POST /products/delete/:id` - Delete products
+- `POST /orders/updatestatus` - Update order status
+
+#### User-Accessible Endpoints
+- `GET /products` - View all products
+- `GET /products/:id` - View specific product
+- All cart endpoints (`/cart/*`)
+- `GET /orders` - View user's orders
+- `GET /orders/:id` - View specific order details
+
+### Setting Up Admin Users
+To create an admin user, manually update the database:
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
+```
 
 ## 📋 Prerequisites
 
@@ -103,6 +137,8 @@ Content-Type: application/json
 }
 ```
 
+**Note:** New users are automatically assigned the "user" role.
+
 #### Login
 ```http
 POST /login
@@ -123,6 +159,8 @@ Content-Type: application/json
 }
 ```
 
+**Note:** JWT token includes the user's role for authorization.
+
 #### Logout
 ```http
 POST /logout
@@ -130,19 +168,19 @@ POST /logout
 
 ### Product Endpoints
 
-#### Get All Products
+#### Get All Products (User/Admin)
 ```http
 GET /products
 Authorization: Bearer <jwt-token>
 ```
 
-#### Get Product by ID
+#### Get Product by ID (User/Admin)
 ```http
 GET /products/{id}
 Authorization: Bearer <jwt-token>
 ```
 
-#### Create Product
+#### Create Product (Admin Only)
 ```http
 POST /products/new
 Authorization: Bearer <jwt-token>
@@ -156,7 +194,16 @@ Content-Type: application/json
 }
 ```
 
-#### Update Product
+**Error Response (Non-Admin):**
+```json
+{
+  "timestamp": "2024-01-01T00:00:00Z",
+  "status": 403,
+  "message": "admin access required"
+}
+```
+
+#### Update Product (Admin Only)
 ```http
 POST /products/update/{id}
 Authorization: Bearer <jwt-token>
@@ -168,13 +215,13 @@ Content-Type: application/json
 }
 ```
 
-#### Delete Product
+#### Delete Product (Admin Only)
 ```http
 POST /products/delete/{id}
 Authorization: Bearer <jwt-token>
 ```
 
-### Cart Endpoints
+### Cart Endpoints (User/Admin)
 
 #### Add to Cart
 ```http
@@ -214,19 +261,19 @@ Authorization: Bearer <jwt-token>
 
 ### Order Endpoints
 
-#### View Orders
+#### View Orders (User/Admin - Own Orders Only)
 ```http
 GET /orders
 Authorization: Bearer <jwt-token>
 ```
 
-#### View Order Items
+#### View Order Items (User/Admin - Own Orders Only)
 ```http
 GET /orders/{order_id}
 Authorization: Bearer <jwt-token>
 ```
 
-#### Update Order Status
+#### Update Order Status (Admin Only)
 ```http
 POST /orders/updatestatus
 Authorization: Bearer <jwt-token>
@@ -245,8 +292,11 @@ Content-Type: application/json
 - **Password hashing** with bcrypt (cost factor 14)
 - **Token expiration** (1 hour by default)
 - **Input validation** for email and password
+- **Role-based JWT claims** for authorization
 
 ### Authorization
+- **Role-based access control** with user and admin roles
+- **Middleware-based route protection** for admin-only endpoints
 - **User context isolation** - users can only access their own data
 - **Order ownership validation** - users can only view/update their own orders
 - **Cart isolation** - each user has their own cart
@@ -263,18 +313,18 @@ Content-Type: application/json
 E-Commerce-Server/
 ├── config/          # Configuration management
 ├── connections/     # Database connection setup
-├── controllers/     # HTTP handlers
+├── controllers/     # HTTP handlers (including RBAC middleware)
 ├── helpers/         # Utility functions (hashing)
-├── models/          # Data models and validation
+├── models/          # Data models and validation (including role constants)
 ├── postgres/        # Generated database code
-├── routes/          # Route definitions
+├── routes/          # Route definitions with role-based protection
 ├── sql/            # SQL schema and queries
 ├── utils/          # Response utilities
 └── main.go         # Application entry point
 ```
 
 ### Database Schema
-- **users**: User accounts and authentication
+- **users**: User accounts, authentication, and roles
 - **products**: Product catalog with pricing
 - **cart**: Shopping cart items
 - **orders**: Order headers
@@ -284,8 +334,9 @@ E-Commerce-Server/
 - **Gin**: HTTP framework
 - **PostgreSQL**: Database
 - **sqlc**: Type-safe SQL code generation
-- **JWT**: Authentication
+- **JWT**: Authentication with role claims
 - **bcrypt**: Password hashing
+- **RBAC**: Role-based access control middleware
 
 ## 🚀 Production Deployment
 
@@ -305,6 +356,8 @@ DB_NAME=production_db_name
 - [ ] Implement rate limiting
 - [ ] Add monitoring and logging
 - [ ] Set up backup strategy
+- [ ] Configure admin user accounts
+- [ ] Review role assignments regularly
 
 ### Performance Considerations
 - **Database indexing** on frequently queried columns
@@ -318,15 +371,21 @@ DB_NAME=production_db_name
 1. Import the provided `E-Commerce-API.postman_collection.json`
 2. Set the `base_url` variable to your server URL
 3. Test the authentication flow first
-4. Use the collection to test all endpoints
+4. Test both user and admin role scenarios
+5. Use the collection to test all endpoints
 
 ### Manual Testing Flow
-1. **Register** a new user
+1. **Register** a new user (gets "user" role by default)
 2. **Login** to get authentication token
-3. **Create** some products
-4. **Add** products to cart
-5. **Place** an order
-6. **View** order history
+3. **Test user permissions** (view products, manage cart, place orders)
+4. **Create admin user** in database
+5. **Login as admin** to test admin-only endpoints
+6. **Test admin permissions** (create/update/delete products, update order status)
+
+### Role Testing
+- **User Role**: Should be able to access all non-admin endpoints
+- **Admin Role**: Should be able to access all endpoints including admin-only ones
+- **Unauthorized Access**: Should receive 403 Forbidden for admin-only endpoints
 
 ## 📝 API Response Format
 
@@ -346,6 +405,15 @@ DB_NAME=production_db_name
   "timestamp": "2024-01-01T00:00:00Z",
   "status": 400,
   "message": "Error description"
+}
+```
+
+### Authorization Error Response
+```json
+{
+  "timestamp": "2024-01-01T00:00:00Z",
+  "status": 403,
+  "message": "admin access required"
 }
 ```
 
