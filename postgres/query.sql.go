@@ -31,26 +31,20 @@ func (q *Queries) AddOrder(ctx context.Context, arg AddOrderParams) (uuid.UUID, 
 
 const addOrderItem = `-- name: AddOrderItem :one
 INSERT INTO order_items (order_id, product_id, quantity, subtotal)
-VALUES ($1, $2, $3, (SELECT price * CAST($5 AS DECIMAL(10, 2)) FROM products WHERE products.id = $4))
+SELECT $1, $2, $3::INTEGER, price * $3::NUMERIC
+FROM products 
+WHERE products.id = $2
 RETURNING subtotal
 `
 
 type AddOrderItemParams struct {
 	OrderID   uuid.UUID `json:"order_id"`
 	ProductID uuid.UUID `json:"product_id"`
-	Quantity  int32     `json:"quantity"`
-	ID        uuid.UUID `json:"id"`
-	Column5   string    `json:"column_5"`
+	Column3   int32     `json:"column_3"`
 }
 
 func (q *Queries) AddOrderItem(ctx context.Context, arg AddOrderItemParams) (string, error) {
-	row := q.db.QueryRowContext(ctx, addOrderItem,
-		arg.OrderID,
-		arg.ProductID,
-		arg.Quantity,
-		arg.ID,
-		arg.Column5,
-	)
+	row := q.db.QueryRowContext(ctx, addOrderItem, arg.OrderID, arg.ProductID, arg.Column3)
 	var subtotal string
 	err := row.Scan(&subtotal)
 	return subtotal, err
@@ -111,18 +105,24 @@ func (q *Queries) AddToCart(ctx context.Context, arg AddToCartParams) (Cart, err
 }
 
 const addUser = `-- name: AddUser :exec
-INSERT INTO users (fullname, email, password)
-VALUES ($1, $2, $3)
+INSERT INTO users (fullname, email, password, role)
+VALUES ($1, $2, $3, $4)
 `
 
 type AddUserParams struct {
 	Fullname string `json:"fullname"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) error {
-	_, err := q.db.ExecContext(ctx, addUser, arg.Fullname, arg.Email, arg.Password)
+	_, err := q.db.ExecContext(ctx, addUser,
+		arg.Fullname,
+		arg.Email,
+		arg.Password,
+		arg.Role,
+	)
 	return err
 }
 
@@ -205,7 +205,7 @@ func (q *Queries) GetProducts(ctx context.Context) ([]Product, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT fullname, email, password, id FROM users WHERE email = $1 LIMIT 1
+SELECT fullname, email, password, role, id FROM users WHERE email = $1 LIMIT 1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -215,6 +215,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Fullname,
 		&i.Email,
 		&i.Password,
+		&i.Role,
 		&i.ID,
 	)
 	return i, err

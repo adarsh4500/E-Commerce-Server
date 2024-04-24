@@ -12,6 +12,7 @@ func SetupRouter() *gin.Engine {
 	router := gin.Default()
 
 	authMiddleware := controllers.Authenticate
+	adminMiddleware := controllers.RequireAdmin
 
 	router.POST("/signup", controllers.SignupHandler)
 	router.POST("/login", controllers.LoginHandler)
@@ -21,9 +22,9 @@ func SetupRouter() *gin.Engine {
 	{
 		productGroup.GET("/:id", controllers.GetProductHandler)
 		productGroup.GET("", controllers.GetAllProductsHandler)
-		productGroup.POST("/new", controllers.NewProductHandler)
-		productGroup.POST("/update/:id", controllers.UpdateProductHandler)
-		productGroup.POST("/delete/:id", controllers.DeleteProductHandler)
+		productGroup.POST("/new", adminMiddleware, controllers.NewProductHandler)
+		productGroup.POST("/update/:id", adminMiddleware, controllers.UpdateProductHandler)
+		productGroup.POST("/delete/:id", adminMiddleware, controllers.DeleteProductHandler)
 	}
 
 	cartGroup := router.Group("/cart", authMiddleware)
@@ -39,7 +40,7 @@ func SetupRouter() *gin.Engine {
 	{
 		orderGroup.GET("", controllers.ViewOrderHandler)
 		orderGroup.GET("/:id", controllers.ViewOrderItemsHandler)
-		orderGroup.POST("/updatestatus", controllers.UpdateOrderStatusHandler)
+		orderGroup.POST("/updatestatus", adminMiddleware, controllers.UpdateOrderStatusHandler)
 	}
 
 	return router

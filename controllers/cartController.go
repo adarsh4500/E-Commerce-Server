@@ -12,7 +12,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
 )
 
 func AddToCartHandler(c *gin.Context) {
@@ -82,7 +81,7 @@ func RemoveFromCartHandler(c *gin.Context) {
 		return
 	}
 	query := postgres.New(connections.DB)
-	cart, err := query.RemoveFromCart(c, postgres.RemoveFromCartParams{
+	cart, err := query.RemoveFromCart(context.Background(), postgres.RemoveFromCartParams{
 		UserID:    userID,
 		ProductID: id,
 	})
@@ -196,9 +195,7 @@ func PlaceOrderHandler(c *gin.Context) {
 		_, err := txx.AddOrderItem(context.Background(), postgres.AddOrderItemParams{
 			OrderID:   orderID,
 			ProductID: item.ProductID,
-			Quantity:  item.Quantity,
-			ID:        item.ProductID,
-			Column5:   strconv.Itoa(int(item.Quantity)),
+			Column3:   item.Quantity,
 		})
 		if err != nil {
 			utils.ErrorResponse(c, http.StatusInternalServerError, err)

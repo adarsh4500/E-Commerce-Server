@@ -2,6 +2,7 @@ CREATE TABLE "users" (
     fullname VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
 	id UUID DEFAULT uuid_generate_v4() PRIMARY KEY
 );
 

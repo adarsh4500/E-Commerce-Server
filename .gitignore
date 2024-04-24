@@ -1,1 +1,13 @@
 .env
+*.exe
+*.sum
+*.log
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

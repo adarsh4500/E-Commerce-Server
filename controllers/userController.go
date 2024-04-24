@@ -53,6 +53,7 @@ func LoginHandler(c *gin.Context) {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"email": creds.Email,
 			"id":    user.ID.String(),
+			"role":  user.Role,
 			"exp":   time.Now().Add(1 * time.Hour).Unix(),
 		})
 
@@ -104,6 +105,7 @@ func SignupHandler(c *gin.Context) {
 		Fullname: user.Fullname,
 		Email:    user.Email,
 		Password: user.Password,
+		Role:     models.RoleUser,
 	}
 
 	query := postgres.New(connections.DB)

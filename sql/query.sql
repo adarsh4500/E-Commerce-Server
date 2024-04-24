@@ -1,6 +1,6 @@
 -- name: AddUser :exec
-INSERT INTO users (fullname, email, password)
-VALUES ($1, $2, $3);
+INSERT INTO users (fullname, email, password, role)
+VALUES ($1, $2, $3, $4);
 
 -- name: GetUserByEmail :one
 SELECT * FROM users WHERE email = $1 LIMIT 1;
@@ -59,7 +59,9 @@ WHERE id = $2 RETURNING *;
 
 -- name: AddOrderItem :one
 INSERT INTO order_items (order_id, product_id, quantity, subtotal)
-VALUES ($1, $2, $3, (SELECT price * CAST($5 AS DECIMAL(10, 2)) FROM products WHERE products.id = $4))
+SELECT $1, $2, $3::INTEGER, price * $3::NUMERIC
+FROM products 
+WHERE products.id = $2
 RETURNING subtotal;
 
 -- name: ViewOrders :many
