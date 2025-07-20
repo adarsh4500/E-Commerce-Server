@@ -65,11 +65,8 @@ func LoginHandler(c *gin.Context) {
 		}
 
 		// Set cookie with security flags
-		c.SetSameSite(http.SameSiteLaxMode)
-		secure := false
-		if c.Request.TLS != nil {
-			secure = true
-		}
+		c.SetSameSite(http.SameSiteNoneMode)
+		secure := true 
 		c.SetCookie("token", tokenString, 3600, "", "", secure, true)
 		utils.SuccessResponseWithMessage(c, "Successfully Logged in")
 		return
@@ -118,7 +115,8 @@ func SignupHandler(c *gin.Context) {
 }
 
 func LogOutHandler(c *gin.Context) {
-	c.SetCookie("token", "", -1, "/", "", false, true)
+	c.SetSameSite(http.SameSiteNoneMode)
+	c.SetCookie("token", "", -1, "/", "", true, true)
 	utils.SuccessResponseWithMessage(c, "Successfully Logged Out")
 }
 
