@@ -13,6 +13,7 @@ var DB_Name string
 var DB_Host string
 var DB_Port string
 var DB_SSLMode string
+var AllowedOrigins string
 
 func LoadEnv() error {
 	_ = godotenv.Load()
@@ -24,6 +25,7 @@ func LoadEnv() error {
 	DB_Host = os.Getenv("DB_HOST")
 	DB_Port = os.Getenv("DB_PORT")
 	DB_SSLMode = os.Getenv("DB_SSLMODE")
+	AllowedOrigins = os.Getenv("ALLOWED_ORIGINS")
 
 	return nil
 }

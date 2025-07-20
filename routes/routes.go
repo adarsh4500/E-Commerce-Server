@@ -1,7 +1,9 @@
 package routes
 
 import (
+	"Ecom/config"
 	"Ecom/controllers"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -11,16 +13,23 @@ import (
 func SetupRouter() *gin.Engine {
 
 	router := gin.Default()
+
+	// Parse allowed origins from environment variable
+	allowedOrigins := []string{"http://localhost:5173"}
+	if config.AllowedOrigins != "" {
+		allowedOrigins = strings.Split(config.AllowedOrigins, ",")
+		for i := range allowedOrigins {
+			allowedOrigins[i] = strings.TrimSpace(allowedOrigins[i])
+		}
+	}
+
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-		AllowOriginFunc: func(origin string) bool {
-			return origin == "http://localhost:5173"
-		},
-		MaxAge: 12 * 60 * 60,
+		MaxAge:           12 * 60 * 60,
 	}))
 
 	authMiddleware := controllers.Authenticate
