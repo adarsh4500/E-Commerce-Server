@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"Ecom/config"
-	"log"
 	"net/http"
 	"time"
 
@@ -37,7 +36,6 @@ func parseJWTToken(c *gin.Context) (jwt.MapClaims, error) {
 func Authenticate(c *gin.Context) {
 	claims, err := parseJWTToken(c)
 	if err != nil {
-		log.Println(err)
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 			"timestamp": time.Now().String(),
 			"status":    http.StatusUnauthorized,

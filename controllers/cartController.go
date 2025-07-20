@@ -124,12 +124,53 @@ func ViewCartHandler(c *gin.Context) {
 		return
 	}
 	query := postgres.New(connections.DB)
-	cart, err := query.ViewCart(context.Background(), userID)
+	rows, err := query.ViewCart(context.Background(), userID)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
 	}
+	var cart []models.CartItemWithProduct
+	for _, row := range rows {
+		cart = append(cart, models.CartItemWithProduct{
+			ID:         row.ID,
+			UserID:     row.UserID,
+			ProductID:  row.ProductID,
+			Quantity:   row.Quantity,
+			ModifiedAt: row.ModifiedAt.Format("2006-01-02T15:04:05Z07:00"),
+			Product: models.ProductDetails{
+				ID:            row.ProductID_2,
+				Name:          row.ProductName,
+				Price:         row.ProductPrice,
+				Description:   row.ProductDescription,
+				StockQuantity: row.ProductStockQuantity,
+			},
+		})
+	}
 	utils.SuccessResponse(c, cart)
+}
+
+func CartCountHandler(c *gin.Context) {
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("user not found in context"))
+		return
+	}
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("invalid user id"))
+		return
+	}
+	query := postgres.New(connections.DB)
+	rows, err := query.ViewCart(context.Background(), userID)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, err)
+		return
+	}
+	total := 0
+	for _, row := range rows {
+		total += int(row.Quantity)
+	}
+	utils.SuccessResponse(c, map[string]int{"count": total})
 }
 
 func PlaceOrderHandler(c *gin.Context) {
@@ -143,7 +184,6 @@ func PlaceOrderHandler(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("invalid user id"))
 		return
 	}
-	// Start transaction
 	tx, err := connections.DB.Begin()
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
@@ -166,7 +206,6 @@ func PlaceOrderHandler(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("cart is empty"))
 		return
 	}
-	// Check stock for each item
 	for _, item := range cart {
 		product, err := txx.GetProductById(context.Background(), item.ProductID)
 		if err != nil {
@@ -178,7 +217,6 @@ func PlaceOrderHandler(c *gin.Context) {
 			return
 		}
 	}
-	// Place order
 	orderID, err := txx.AddOrder(context.Background(), postgres.AddOrderParams{
 		CustomerID:  userID,
 		TotalAmount: "0.0",
@@ -202,7 +240,7 @@ func PlaceOrderHandler(c *gin.Context) {
 			return
 		}
 		total += subtotal
-		// Update stock
+		// Reduce stock
 		_, err = txx.UpdateProductById(context.Background(), postgres.UpdateProductByIdParams{
 			ID:            item.ProductID,
 			Name:          product.Name,
@@ -229,4 +267,53 @@ func PlaceOrderHandler(c *gin.Context) {
 		return
 	}
 	utils.SuccessResponse(c, orderdetails)
+}
+
+func UpdateCartItemHandler(c *gin.Context) {
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("user not found in context"))
+		return
+	}
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("invalid user id"))
+		return
+	}
+	productID, err := uuid.Parse(c.Param("product_id"))
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("invalid product id"))
+		return
+	}
+	var body struct {
+		Quantity int32 `json:"quantity"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, err)
+		return
+	}
+	query := postgres.New(connections.DB)
+	if body.Quantity <= 0 {
+		// Remove item if quantity is 0 or less
+		_, err := query.RemoveFromCart(context.Background(), postgres.RemoveFromCartParams{
+			UserID:    userID,
+			ProductID: productID,
+		})
+		if err != nil {
+			utils.ErrorResponse(c, http.StatusInternalServerError, err)
+			return
+		}
+		utils.SuccessResponseWithMessage(c, "Item removed from cart")
+		return
+	}
+	item, err := query.UpdateCartItem(context.Background(), postgres.UpdateCartItemParams{
+		UserID:    userID,
+		ProductID: productID,
+		Quantity:  body.Quantity,
+	})
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, err)
+		return
+	}
+	utils.SuccessResponse(c, item)
 }

@@ -16,6 +16,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"reflect"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
@@ -49,7 +51,6 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	if helpers.IsPasswordCorrect(creds.Password, user.Password) {
-		// Create Token Object
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 			"email": creds.Email,
 			"id":    user.ID.String(),
@@ -57,14 +58,13 @@ func LoginHandler(c *gin.Context) {
 			"exp":   time.Now().Add(1 * time.Hour).Unix(),
 		})
 
-		// Sign Token
 		tokenString, err := token.SignedString([]byte(config.JWTSecret))
 		if err != nil {
 			utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("invalid email or password"))
 			return
 		}
 
-		// Set Cookie (secure, httpOnly)
+		// Set cookie with security flags
 		c.SetSameSite(http.SameSiteLaxMode)
 		secure := false
 		if c.Request.TLS != nil {
@@ -120,6 +120,82 @@ func SignupHandler(c *gin.Context) {
 func LogOutHandler(c *gin.Context) {
 	c.SetCookie("token", "", -1, "/", "", false, true)
 	utils.SuccessResponseWithMessage(c, "Successfully Logged Out")
+}
+
+func MeHandler(c *gin.Context) {
+	claims, err := parseJWTToken(c)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, err)
+		return
+	}
+	email, emailOk := claims["email"].(string)
+	if !emailOk {
+		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("invalid jwt claims"))
+		return
+	}
+	query := postgres.New(connections.DB)
+	user, err := query.GetUserByEmail(context.Background(), email)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, err)
+		return
+	}
+	type userResponse struct {
+		Fullname string      `json:"fullname"`
+		Email    string      `json:"email"`
+		Role     string      `json:"role"`
+		ID       interface{} `json:"id,omitempty"`
+	}
+	resp := userResponse{
+		Fullname: user.Fullname,
+		Email:    user.Email,
+		Role:     user.Role,
+	}
+	if idField := getField(user, "ID"); idField != nil {
+		resp.ID = idField
+	}
+	utils.SuccessResponse(c, resp)
+}
+
+func GetAllUsersHandler(c *gin.Context) {
+	query := postgres.New(connections.DB)
+	users, err := query.GetUsers(context.Background())
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, err)
+		return
+	}
+	type userResponse struct {
+		Fullname string      `json:"fullname"`
+		Email    string      `json:"email"`
+		Role     string      `json:"role"`
+		ID       interface{} `json:"id,omitempty"`
+	}
+	resp := make([]userResponse, 0, len(users))
+	for _, user := range users {
+		item := userResponse{
+			Fullname: user.Fullname,
+			Email:    user.Email,
+			Role:     user.Role,
+		}
+		if idField := getField(user, "ID"); idField != nil {
+			item.ID = idField
+		}
+		resp = append(resp, item)
+	}
+	utils.SuccessResponse(c, resp)
+}
+
+// getField is a helper to get the ID field if present (for future-proofing)
+func getField(user interface{}, field string) interface{} {
+	// Use reflection to get the field if it exists
+	// This is a safe fallback if the user struct has an ID field
+	v := reflect.ValueOf(user)
+	if v.Kind() == reflect.Struct {
+		f := v.FieldByName(field)
+		if f.IsValid() {
+			return f.Interface()
+		}
+	}
+	return nil
 }
 
 // Email validation helper

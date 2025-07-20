@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"database/sql"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -17,7 +19,31 @@ import (
 func GetAllProductsHandler(c *gin.Context) {
 	query := postgres.New(connections.DB)
 
-	products, err := query.GetProducts(context.Background())
+	search := c.Query("search")
+	sort := c.Query("sort")
+	pageStr := c.Query("page")
+	limitStr := c.Query("limit")
+	page := 1
+	limit := 16
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+		}
+	}
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+
+	offset := (page - 1) * limit
+
+	products, err := query.GetProductsSorted(context.Background(), postgres.GetProductsSortedParams{
+		Column1: sql.NullString{String: search, Valid: search != ""},
+		Column2: sort,
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
@@ -167,4 +193,15 @@ func DeleteProductHandler(c *gin.Context) {
 		return
 	}
 	utils.SuccessResponse(c, product)
+}
+
+func GetProductsCountHandler(c *gin.Context) {
+	search := c.Query("search")
+	query := postgres.New(connections.DB)
+	count, err := query.GetProductsCount(context.Background(), sql.NullString{String: search, Valid: search != ""})
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, err)
+		return
+	}
+	utils.SuccessResponse(c, count)
 }

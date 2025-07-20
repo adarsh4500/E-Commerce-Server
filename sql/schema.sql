@@ -18,7 +18,8 @@ CREATE TABLE "cart" (
     "user_id" UUID REFERENCES "users"("id") NOT NULL,
     "product_id" UUID REFERENCES "products"("id") NOT NULL,
     "quantity" INT NOT NULL,
-    "modified_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+    "modified_at" TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE("user_id", "product_id")
 );
 CREATE TABLE "orders" (
     "id" UUID DEFAULT uuid_generate_v4() PRIMARY KEY,

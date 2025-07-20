@@ -7,14 +7,15 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 const addOrder = `-- name: AddOrder :one
-INSERT INTO orders (customer_id, total_amount)
-VALUES ($1, $2) RETURNING id
+INSERT INTO orders (customer_id, total_amount, status)
+VALUES ($1, $2, 'Pending') RETURNING id
 `
 
 type AddOrderParams struct {
@@ -82,7 +83,10 @@ func (q *Queries) AddProduct(ctx context.Context, arg AddProductParams) (Product
 
 const addToCart = `-- name: AddToCart :one
 INSERT INTO cart (user_id, product_id, quantity)
-VALUES ($1, $2, $3) RETURNING id, user_id, product_id, quantity, modified_at
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, product_id)
+DO UPDATE SET quantity = cart.quantity + EXCLUDED.quantity, modified_at = CURRENT_TIMESTAMP
+RETURNING id, user_id, product_id, quantity, modified_at
 `
 
 type AddToCartParams struct {
@@ -154,6 +158,56 @@ func (q *Queries) DeleteProductById(ctx context.Context, id uuid.UUID) (Product,
 	return i, err
 }
 
+const getAllPendingOrders = `-- name: GetAllPendingOrders :many
+SELECT id, customer_id, order_date, total_amount, status FROM orders WHERE LOWER(status) = 'pending'
+`
+
+func (q *Queries) GetAllPendingOrders(ctx context.Context) ([]Order, error) {
+	rows, err := q.db.QueryContext(ctx, getAllPendingOrders)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Order
+	for rows.Next() {
+		var i Order
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerID,
+			&i.OrderDate,
+			&i.TotalAmount,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getOrderById = `-- name: GetOrderById :one
+SELECT id, customer_id, order_date, total_amount, status FROM orders WHERE id = $1
+`
+
+func (q *Queries) GetOrderById(ctx context.Context, id uuid.UUID) (Order, error) {
+	row := q.db.QueryRowContext(ctx, getOrderById, id)
+	var i Order
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.OrderDate,
+		&i.TotalAmount,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getProductById = `-- name: GetProductById :one
 SELECT id, name, price, description, stock_quantity FROM products WHERE id = $1
 `
@@ -204,6 +258,76 @@ func (q *Queries) GetProducts(ctx context.Context) ([]Product, error) {
 	return items, nil
 }
 
+const getProductsCount = `-- name: GetProductsCount :one
+SELECT COUNT(*) FROM products
+WHERE LOWER(name) LIKE LOWER('%' || COALESCE($1, '') || '%')
+  OR LOWER(description) LIKE LOWER('%' || COALESCE($1, '') || '%')
+`
+
+func (q *Queries) GetProductsCount(ctx context.Context, dollar_1 sql.NullString) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getProductsCount, dollar_1)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getProductsSorted = `-- name: GetProductsSorted :many
+SELECT id, name, price, description, stock_quantity FROM products
+WHERE
+  LOWER(name) LIKE LOWER('%' || COALESCE($1, '') || '%')
+  OR LOWER(description) LIKE LOWER('%' || COALESCE($1, '') || '%')
+ORDER BY
+  CASE WHEN $2 = 'name-asc' THEN name END ASC,
+  CASE WHEN $2 = 'name-desc' THEN name END DESC,
+  CASE WHEN $2 = 'price-asc' THEN price::numeric END ASC,
+  CASE WHEN $2 = 'price-desc' THEN price::numeric END DESC,
+  CASE WHEN $2 = 'stock-asc' THEN stock_quantity END ASC,
+  CASE WHEN $2 = 'stock-desc' THEN stock_quantity END DESC,
+  id ASC
+LIMIT $3 OFFSET $4
+`
+
+type GetProductsSortedParams struct {
+	Column1 sql.NullString `json:"column_1"`
+	Column2 interface{}    `json:"column_2"`
+	Limit   int32          `json:"limit"`
+	Offset  int32          `json:"offset"`
+}
+
+func (q *Queries) GetProductsSorted(ctx context.Context, arg GetProductsSortedParams) ([]Product, error) {
+	rows, err := q.db.QueryContext(ctx, getProductsSorted,
+		arg.Column1,
+		arg.Column2,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Product
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Price,
+			&i.Description,
+			&i.StockQuantity,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT fullname, email, password, role, id FROM users WHERE email = $1 LIMIT 1
 `
@@ -221,6 +345,39 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	return i, err
 }
 
+const getUsers = `-- name: GetUsers :many
+SELECT fullname, email, password, role, id FROM users
+`
+
+func (q *Queries) GetUsers(ctx context.Context) ([]User, error) {
+	rows, err := q.db.QueryContext(ctx, getUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []User
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.Fullname,
+			&i.Email,
+			&i.Password,
+			&i.Role,
+			&i.ID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const removeFromCart = `-- name: RemoveFromCart :one
 DELETE FROM cart
 WHERE user_id = $1 AND product_id = $2 RETURNING id, user_id, product_id, quantity, modified_at
@@ -233,6 +390,32 @@ type RemoveFromCartParams struct {
 
 func (q *Queries) RemoveFromCart(ctx context.Context, arg RemoveFromCartParams) (Cart, error) {
 	row := q.db.QueryRowContext(ctx, removeFromCart, arg.UserID, arg.ProductID)
+	var i Cart
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ProductID,
+		&i.Quantity,
+		&i.ModifiedAt,
+	)
+	return i, err
+}
+
+const updateCartItem = `-- name: UpdateCartItem :one
+UPDATE cart
+SET quantity = $3, modified_at = CURRENT_TIMESTAMP
+WHERE user_id = $1 AND product_id = $2
+RETURNING id, user_id, product_id, quantity, modified_at
+`
+
+type UpdateCartItemParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	ProductID uuid.UUID `json:"product_id"`
+	Quantity  int32     `json:"quantity"`
+}
+
+func (q *Queries) UpdateCartItem(ctx context.Context, arg UpdateCartItemParams) (Cart, error) {
+	row := q.db.QueryRowContext(ctx, updateCartItem, arg.UserID, arg.ProductID, arg.Quantity)
 	var i Cart
 	err := row.Scan(
 		&i.ID,
@@ -330,24 +513,46 @@ func (q *Queries) UpdateProductById(ctx context.Context, arg UpdateProductByIdPa
 }
 
 const viewCart = `-- name: ViewCart :many
-SELECT id, user_id, product_id, quantity, modified_at FROM cart WHERE user_id = $1
+SELECT cart.id, cart.user_id, cart.product_id, cart.quantity, cart.modified_at,
+       products.id as product_id, products.name as product_name, products.price as product_price, products.description as product_description, products.stock_quantity as product_stock_quantity
+FROM cart
+JOIN products ON cart.product_id = products.id
+WHERE cart.user_id = $1
 `
 
-func (q *Queries) ViewCart(ctx context.Context, userID uuid.UUID) ([]Cart, error) {
+type ViewCartRow struct {
+	ID                   uuid.UUID `json:"id"`
+	UserID               uuid.UUID `json:"user_id"`
+	ProductID            uuid.UUID `json:"product_id"`
+	Quantity             int32     `json:"quantity"`
+	ModifiedAt           time.Time `json:"modified_at"`
+	ProductID_2          uuid.UUID `json:"product_id_2"`
+	ProductName          string    `json:"product_name"`
+	ProductPrice         string    `json:"product_price"`
+	ProductDescription   string    `json:"product_description"`
+	ProductStockQuantity int32     `json:"product_stock_quantity"`
+}
+
+func (q *Queries) ViewCart(ctx context.Context, userID uuid.UUID) ([]ViewCartRow, error) {
 	rows, err := q.db.QueryContext(ctx, viewCart, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Cart
+	var items []ViewCartRow
 	for rows.Next() {
-		var i Cart
+		var i ViewCartRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
 			&i.ProductID,
 			&i.Quantity,
 			&i.ModifiedAt,
+			&i.ProductID_2,
+			&i.ProductName,
+			&i.ProductPrice,
+			&i.ProductDescription,
+			&i.ProductStockQuantity,
 		); err != nil {
 			return nil, err
 		}

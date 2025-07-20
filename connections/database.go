@@ -4,7 +4,6 @@ import (
 	"Ecom/config"
 	"database/sql"
 	"fmt"
-	"log"
 
 	_ "github.com/lib/pq"
 )
@@ -26,6 +25,5 @@ func InitializeDB() error {
 		return err
 	}
 
-	log.Print("Connected to database")
 	return nil
 }

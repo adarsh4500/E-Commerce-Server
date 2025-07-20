@@ -40,8 +40,7 @@ func UpdateOrderStatusHandler(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusBadRequest, err)
 		return
 	}
-	// Validate status
-	allowed := map[string]bool{"Pending": true, "Shipped": true, "Delivered": true, "Cancelled": true}
+	allowed := map[string]bool{"Pending": true, "Shipped": true, "Delivered": true, "Cancelled": true, "Processing": true}
 	if !allowed[param.Status] {
 		utils.ErrorResponse(c, http.StatusBadRequest, errors.New("invalid order status"))
 		return
@@ -56,6 +55,9 @@ func UpdateOrderStatusHandler(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
 	}
+	// Check authorization
+	claims, _ := parseJWTToken(c)
+	role, _ := claims["role"].(string)
 	userIDStr, exists := c.Get("user_id")
 	if !exists {
 		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("user not found in context"))
@@ -66,7 +68,7 @@ func UpdateOrderStatusHandler(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("invalid user id"))
 		return
 	}
-	if order.CustomerID != userID {
+	if role != "admin" && order.CustomerID != userID {
 		utils.ErrorResponse(c, http.StatusForbidden, errors.New("not authorized to update this order"))
 		return
 	}
@@ -89,10 +91,10 @@ func ViewOrderItemsHandler(c *gin.Context) {
 		utils.ErrorResponse(c, http.StatusInternalServerError, err)
 		return
 	}
-	// Authorization: check if order belongs to user
+	// Check if order belongs to user
 	if len(items) > 0 {
 		orderID := items[0].OrderID
-		order, err := query.UpdateOrderStatus(context.Background(), postgres.UpdateOrderStatusParams{ID: orderID, Status: ""})
+		order, err := query.GetOrderById(context.Background(), orderID)
 		if err == nil {
 			userIDStr, exists := c.Get("user_id")
 			if exists {
@@ -105,4 +107,58 @@ func ViewOrderItemsHandler(c *gin.Context) {
 		}
 	}
 	utils.SuccessResponse(c, items)
+}
+
+func OrderHistoryHandler(c *gin.Context) {
+	userIDStr, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("user not found in context"))
+		return
+	}
+	userID, err := uuid.Parse(userIDStr.(string))
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, errors.New("invalid user id"))
+		return
+	}
+	query := postgres.New(connections.DB)
+	orders, err := query.ViewOrders(context.Background(), userID)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, err)
+		return
+	}
+	var result []map[string]interface{}
+	for _, order := range orders {
+		items, _ := query.ViewOrderItems(context.Background(), order.ID)
+		result = append(result, map[string]interface{}{
+			"id":           order.ID,
+			"order_date":   order.OrderDate,
+			"total_amount": order.TotalAmount,
+			"status":       order.Status,
+			"items":        items,
+		})
+	}
+	utils.SuccessResponse(c, result)
+}
+
+// Get all pending orders
+func AdminAllOrdersHandler(c *gin.Context) {
+	query := postgres.New(connections.DB)
+	orders, err := query.GetAllPendingOrders(context.Background())
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, err)
+		return
+	}
+	var result []map[string]interface{}
+	for _, order := range orders {
+		items, _ := query.ViewOrderItems(context.Background(), order.ID)
+		result = append(result, map[string]interface{}{
+			"id":           order.ID,
+			"customer_id":  order.CustomerID,
+			"order_date":   order.OrderDate,
+			"total_amount": order.TotalAmount,
+			"status":       order.Status,
+			"items":        items,
+		})
+	}
+	utils.SuccessResponse(c, result)
 }

@@ -3,11 +3,19 @@
     "_postman_id": "ecommerce-api-collection-id",
     "name": "E-Commerce API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Postman collection for E-Commerce API built with Go and Gin."
+    "description": "Complete Postman collection for E-Commerce API built with Go and Gin. Includes authentication, product management, cart operations, order processing, and admin functionality."
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ],
   "item": [
     {
       "name": "Authentication",
+      "description": "User authentication endpoints for registration, login, and logout",
       "item": [
         {
           "name": "Signup",
@@ -31,11 +39,18 @@
               "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"message\": \"Signed Up Successfully\"\n}"
             },
             {
-              "name": "Validation Error",
+              "name": "Validation Error - Invalid Email",
               "originalRequest": {},
               "status": "Bad Request",
               "code": 400,
               "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"invalid email format\"\n}"
+            },
+            {
+              "name": "Validation Error - Short Password",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"password must be at least 8 characters\"\n}"
             }
           ]
         },
@@ -66,6 +81,13 @@
               "status": "Unauthorized",
               "code": 401,
               "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 401,\n  \"message\": \"incorrect password\"\n}"
+            },
+            {
+              "name": "User Not Found",
+              "originalRequest": {},
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 401,\n  \"message\": \"user not found\"\n}"
             }
           ]
         },
@@ -90,13 +112,24 @@
     },
     {
       "name": "Products",
+      "description": "Product management endpoints for viewing, creating, updating, and deleting products",
       "item": [
         {
-          "name": "Get All Products",
+          "name": "Get All Products (Search & Pagination)",
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/products", "host": ["{{base_url}}"], "path": ["products"] }
+            "url": { 
+              "raw": "{{base_url}}/products?search=phone&sort=name-asc&page=1&limit=20", 
+              "host": ["{{base_url}}"], 
+              "path": ["products"], 
+              "query": [
+                { "key": "search", "value": "phone", "description": "Search term for product name or description" },
+                { "key": "sort", "value": "name-asc", "description": "Sort options: name-asc, name-desc, price-asc, price-desc, stock-asc, stock-desc" },
+                { "key": "page", "value": "1", "description": "Page number (default: 1)" },
+                { "key": "limit", "value": "20", "description": "Items per page (default: 16, max: 100)" }
+              ] 
+            }
           },
           "response": [
             {
@@ -104,7 +137,31 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\"id\": \"uuid\", \"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n  ]\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"name\": \"iPhone 15\",\n      \"price\": \"999.00\",\n      \"description\": \"Latest iPhone model\",\n      \"stock_quantity\": 50\n    },\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440001\",\n      \"name\": \"Samsung Galaxy\",\n      \"price\": \"899.00\",\n      \"description\": \"Android flagship phone\",\n      \"stock_quantity\": 30\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Products Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { 
+              "raw": "{{base_url}}/products/count?search=phone", 
+              "host": ["{{base_url}}"], 
+              "path": ["products", "count"], 
+              "query": [
+                { "key": "search", "value": "phone", "description": "Optional search term to filter count" }
+              ] 
+            }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": 42\n}"
             }
           ]
         },
@@ -121,7 +178,7 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"name\": \"iPhone 15\",\n    \"price\": \"999.00\",\n    \"description\": \"Latest iPhone model\",\n    \"stock_quantity\": 50\n  }\n}"
             },
             {
               "name": "Not Found",
@@ -133,7 +190,7 @@
           ]
         },
         {
-          "name": "Add New Product",
+          "name": "Add New Product (Admin Only)",
           "request": {
             "method": "POST",
             "header": [
@@ -141,7 +198,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Product 1\",\n  \"price\": 10.00,\n  \"description\": \"A product\",\n  \"stock_quantity\": 100\n}"
+              "raw": "{\n  \"name\": \"iPhone 15 Pro\",\n  \"price\": 1199.00,\n  \"description\": \"Premium iPhone with advanced features\",\n  \"stock_quantity\": 25\n}"
             },
             "url": { "raw": "{{base_url}}/products/new", "host": ["{{base_url}}"], "path": ["products", "new"] }
           },
@@ -151,19 +208,33 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n    \"name\": \"iPhone 15 Pro\",\n    \"price\": \"1199.00\",\n    \"description\": \"Premium iPhone with advanced features\",\n    \"stock_quantity\": 25\n  }\n}"
             },
             {
-              "name": "Validation Error",
+              "name": "Validation Error - Invalid Name",
+              "originalRequest": {},
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"name must be 2-255 characters\"\n}"
+            },
+            {
+              "name": "Validation Error - Invalid Price",
               "originalRequest": {},
               "status": "Bad Request",
               "code": 400,
               "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"price must be greater than 0\"\n}"
+            },
+            {
+              "name": "Forbidden - Non-Admin",
+              "originalRequest": {},
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 403,\n  \"message\": \"admin access required\"\n}"
             }
           ]
         },
         {
-          "name": "Update Product by ID",
+          "name": "Update Product by ID (Admin Only)",
           "request": {
             "method": "POST",
             "header": [
@@ -171,7 +242,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Product\",\n  \"price\": 12.00\n}"
+              "raw": "{\n  \"name\": \"iPhone 15 Pro Max\",\n  \"price\": 1299.00,\n  \"description\": \"Updated description\"\n}"
             },
             "url": { "raw": "{{base_url}}/products/update/:id", "host": ["{{base_url}}"], "path": ["products", "update", ":id"] }
           },
@@ -181,7 +252,7 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"name\": \"Updated Product\", \"price\": \"12.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n    \"name\": \"iPhone 15 Pro Max\",\n    \"price\": \"1299.00\",\n    \"description\": \"Updated description\",\n    \"stock_quantity\": 25\n  }\n}"
             },
             {
               "name": "Not Found",
@@ -193,7 +264,7 @@
           ]
         },
         {
-          "name": "Delete Product by ID",
+          "name": "Delete Product by ID (Admin Only)",
           "request": {
             "method": "POST",
             "header": [],
@@ -205,7 +276,7 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"name\": \"Product 1\", \"price\": \"10.00\", \"description\": \"A product\", \"stock_quantity\": 100}\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n    \"name\": \"iPhone 15 Pro Max\",\n    \"price\": \"1299.00\",\n    \"description\": \"Updated description\",\n    \"stock_quantity\": 25\n  }\n}"
             },
             {
               "name": "Not Found",
@@ -220,9 +291,10 @@
     },
     {
       "name": "Cart",
+      "description": "Shopping cart management endpoints for authenticated users",
       "item": [
         {
-          "name": "Add to Cart",
+          "name": "Add to Cart (Upsert)",
           "request": {
             "method": "POST",
             "header": [
@@ -230,7 +302,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"product_id\": \"uuid\",\n  \"quantity\": 2\n}"
+              "raw": "{\n  \"product_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"quantity\": 2\n}"
             },
             "url": { "raw": "{{base_url}}/cart/new", "host": ["{{base_url}}"], "path": ["cart", "new"] }
           },
@@ -240,10 +312,10 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"user_id\": \"uuid\", \"product_id\": \"uuid\", \"quantity\": 2, \"modified_at\": \"2024-01-01T00:00:00Z\"}\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440003\",\n    \"user_id\": \"550e8400-e29b-41d4-a716-446655440004\",\n    \"product_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"quantity\": 2\n  }\n}"
             },
             {
-              "name": "Validation Error",
+              "name": "Validation Error - Invalid Quantity",
               "originalRequest": {},
               "status": "Bad Request",
               "code": 400,
@@ -254,16 +326,22 @@
               "originalRequest": {},
               "status": "Bad Request",
               "code": 400,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"not enough items in stock. requested:5, available:3\"\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"not enough items in stock. requested:10, available:5\"\n}"
             }
           ]
         },
         {
-          "name": "Remove from Cart",
+          "name": "Update Cart Item Quantity",
           "request": {
             "method": "POST",
-            "header": [],
-            "url": { "raw": "{{base_url}}/cart/remove/:id", "host": ["{{base_url}}"], "path": ["cart", "remove", ":id"] }
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 3\n}"
+            },
+            "url": { "raw": "{{base_url}}/cart/update/:product_id", "host": ["{{base_url}}"], "path": ["cart", "update", ":product_id"] }
           },
           "response": [
             {
@@ -271,7 +349,14 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"user_id\": \"uuid\", \"product_id\": \"uuid\", \"quantity\": 2, \"modified_at\": \"2024-01-01T00:00:00Z\"}\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440003\",\n    \"user_id\": \"550e8400-e29b-41d4-a716-446655440004\",\n    \"product_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"quantity\": 3\n  }\n}"
+            },
+            {
+              "name": "Item Removed (Quantity 0)",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"message\": \"Item removed from cart\"\n}"
             }
           ]
         },
@@ -288,7 +373,24 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\"id\": \"uuid\", \"user_id\": \"uuid\", \"product_id\": \"uuid\", \"quantity\": 2, \"modified_at\": \"2024-01-01T00:00:00Z\"}\n  ]\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440003\",\n      \"user_id\": \"550e8400-e29b-41d4-a716-446655440004\",\n      \"product_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"quantity\": 2,\n      \"modified_at\": \"2024-01-01T00:00:00Z\",\n      \"product\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"name\": \"iPhone 15\",\n        \"price\": \"999.00\",\n        \"description\": \"Latest iPhone model\",\n        \"stock_quantity\": 50\n      }\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Remove from Cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{base_url}}/cart/remove/:product_id", "host": ["{{base_url}}"], "path": ["cart", "remove", ":product_id"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440003\",\n    \"user_id\": \"550e8400-e29b-41d4-a716-446655440004\",\n    \"product_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"quantity\": 2\n  }\n}"
             }
           ]
         },
@@ -322,7 +424,7 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"customer_id\": \"uuid\", \"order_date\": \"2024-01-01T00:00:00Z\", \"total_amount\": \"24.00\", \"status\": \"Pending\"}\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n    \"customer_id\": \"550e8400-e29b-41d4-a716-446655440004\",\n    \"order_date\": \"2024-01-01T00:00:00Z\",\n    \"total_amount\": \"1998.00\",\n    \"status\": \"Pending\"\n  }\n}"
             },
             {
               "name": "Empty Cart",
@@ -336,7 +438,7 @@
               "originalRequest": {},
               "status": "Bad Request",
               "code": 400,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"not enough stock for product: Product Name\"\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 400,\n  \"message\": \"not enough stock for product: iPhone 15\"\n}"
             }
           ]
         }
@@ -344,6 +446,7 @@
     },
     {
       "name": "Orders",
+      "description": "Order management endpoints for viewing orders and updating status",
       "item": [
         {
           "name": "View Orders",
@@ -358,7 +461,7 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\"id\": \"uuid\", \"order_date\": \"2024-01-01T00:00:00Z\", \"total_amount\": \"24.00\", \"status\": \"Pending\"}\n  ]\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n      \"customer_id\": \"550e8400-e29b-41d4-a716-446655440004\",\n      \"order_date\": \"2024-01-01T00:00:00Z\",\n      \"total_amount\": \"1998.00\",\n      \"status\": \"Pending\"\n    }\n  ]\n}"
             }
           ]
         },
@@ -367,7 +470,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{base_url}}/orders/:id", "host": ["{{base_url}}"], "path": ["orders", ":id"] }
+            "url": { "raw": "{{base_url}}/orders/:order_id", "host": ["{{base_url}}"], "path": ["orders", ":order_id"] }
           },
           "response": [
             {
@@ -375,7 +478,7 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\"id\": \"uuid\", \"order_id\": \"uuid\", \"product_id\": \"uuid\", \"quantity\": 2, \"subtotal\": \"20.00\"}\n  ]\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440006\",\n      \"order_id\": \"550e8400-e29b-41d4-a716-446655440005\",\n      \"product_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"quantity\": 2,\n      \"subtotal\": \"1998.00\"\n    }\n  ]\n}"
             },
             {
               "name": "Not Found",
@@ -385,7 +488,7 @@
               "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 404,\n  \"message\": \"sql: no rows in result set\"\n}"
             },
             {
-              "name": "Forbidden",
+              "name": "Forbidden - Not Owner",
               "originalRequest": {},
               "status": "Forbidden",
               "code": 403,
@@ -394,7 +497,7 @@
           ]
         },
         {
-          "name": "Update Order Status",
+          "name": "Update Order Status (Admin Only)",
           "request": {
             "method": "POST",
             "header": [
@@ -402,7 +505,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id\": \"uuid\",\n  \"status\": \"Shipped\"\n}"
+              "raw": "{\n  \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n  \"status\": \"Shipped\"\n}"
             },
             "url": { "raw": "{{base_url}}/orders/updatestatus", "host": ["{{base_url}}"], "path": ["orders", "updatestatus"] }
           },
@@ -412,7 +515,7 @@
               "originalRequest": {},
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\"id\": \"uuid\", \"customer_id\": \"uuid\", \"order_date\": \"2024-01-01T00:00:00Z\", \"total_amount\": \"24.00\", \"status\": \"Shipped\"}\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n    \"customer_id\": \"550e8400-e29b-41d4-a716-446655440004\",\n    \"order_date\": \"2024-01-01T00:00:00Z\",\n    \"total_amount\": \"1998.00\",\n    \"status\": \"Shipped\"\n  }\n}"
             },
             {
               "name": "Invalid Status",
@@ -429,21 +532,126 @@
               "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 404,\n  \"message\": \"sql: no rows in result set\"\n}"
             },
             {
-              "name": "Forbidden",
+              "name": "Forbidden - Non-Admin",
               "originalRequest": {},
               "status": "Forbidden",
               "code": 403,
-              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 403,\n  \"message\": \"not authorized to update this order\"\n}"
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 403,\n  \"message\": \"admin access required\"\n}"
             }
           ]
         }
       ]
-    }
-  ],
-  "variable": [
+    },
     {
-      "key": "base_url",
-      "value": "http://localhost:8080"
+      "name": "User",
+      "description": "User profile and utility endpoints for authenticated users",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/user/me", "host": ["{{base_url}}"], "path": ["user", "me"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440004\",\n    \"fullname\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"role\": \"user\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Cart Item Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/user/cart/count", "host": ["{{base_url}}"], "path": ["user", "cart", "count"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": {\n    \"count\": 5\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Order History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/user/orders/history", "host": ["{{base_url}}"], "path": ["user", "orders", "history"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n      \"order_date\": \"2024-01-01T00:00:00Z\",\n      \"total_amount\": \"1998.00\",\n      \"status\": \"Delivered\",\n      \"items\": [\n        {\n          \"id\": \"550e8400-e29b-41d4-a716-446655440006\",\n          \"order_id\": \"550e8400-e29b-41d4-a716-446655440005\",\n          \"product_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n          \"quantity\": 2,\n          \"subtotal\": \"1998.00\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Admin-only endpoints for user and order management",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/admin/users", "host": ["{{base_url}}"], "path": ["admin", "users"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440004\",\n      \"fullname\": \"John Doe\",\n      \"email\": \"john@example.com\",\n      \"role\": \"user\"\n    },\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440007\",\n      \"fullname\": \"Admin User\",\n      \"email\": \"admin@example.com\",\n      \"role\": \"admin\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "Forbidden - Non-Admin",
+              "originalRequest": {},
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 403,\n  \"message\": \"admin access required\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get All Pending Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/admin/orders", "host": ["{{base_url}}"], "path": ["admin", "orders"] }
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {},
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440005\",\n      \"customer_id\": \"550e8400-e29b-41d4-a716-446655440004\",\n      \"order_date\": \"2024-01-01T00:00:00Z\",\n      \"total_amount\": \"1998.00\",\n      \"status\": \"Pending\",\n      \"items\": [\n        {\n          \"id\": \"550e8400-e29b-41d4-a716-446655440006\",\n          \"order_id\": \"550e8400-e29b-41d4-a716-446655440005\",\n          \"product_id\": \"550e8400-e29b-41d4-a716-446655440000\",\n          \"quantity\": 2,\n          \"subtotal\": \"1998.00\"\n        }\n      ]\n    }\n  ]\n}"
+            },
+            {
+              "name": "Forbidden - Non-Admin",
+              "originalRequest": {},
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"status\": 403,\n  \"message\": \"admin access required\"\n}"
+            }
+          ]
+        }
+      ]
     }
   ]
 } 
