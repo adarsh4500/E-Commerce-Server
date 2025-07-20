@@ -15,10 +15,7 @@ var DB_Port string
 var DB_SSLMode string
 
 func LoadEnv() error {
-	err := godotenv.Load()
-	if err != nil {
-		return err
-	}
+	_ = godotenv.Load()
 
 	JWTSecret = os.Getenv("JWT_SECRET_KEY")
 	DB_UserName = os.Getenv("DB_USERNAME")
